@@ -1,34 +1,26 @@
 namespace Survivor.Classes
 {
-    public class Bounds
+    public class WorldBounds
     {
-        private int _xStart;
-        private int _xEnd;
-        private int _yStart;
-        private int _yEnd;
+        private readonly int _xStart;
+        private readonly int _xEnd;
+        private readonly int _yStart;
+        private readonly int _yEnd;
 
-        public Bounds()
+        public WorldBounds(int width = 1280, int height = 720)
         {
             _xStart = 0;
-            _xEnd = 1280;
             _yStart = 0;
-            _yEnd = 720;
+            _xEnd = width;
+            _yEnd = height;
         }
 
-        public (int XS, int XE) XBounds
-        {
-            get
-            {
-                return (_xStart, _xEnd);
-            }
-        }
+        public int XStart => _xStart;
+        public int XEnd => _xEnd;
+        public int YStart => _yStart;
+        public int YEnd => _yEnd;
 
-        public (int YS, int YE) YBounds
-        {
-            get
-            {
-                return (_yStart, _yEnd);
-            }
-        }
+        public int Width => _xEnd - _xStart;
+        public int Height => _yEnd - _yStart;
     }
 }
