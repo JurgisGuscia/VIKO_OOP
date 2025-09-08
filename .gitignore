@@ -1,0 +1,21 @@
+# Build directories
+bin/
+obj/
+
+# Visual Studio files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Rider IDE files (if using JetBrains Rider)
+.idea/
+
+# MonoGame content pipeline generated files
+Content/bin/
+Content/obj/
+
+# Other OS files
+.DS_Store
+Thumbs.db
