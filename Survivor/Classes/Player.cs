@@ -1,5 +1,9 @@
+using System;
+using System.Numerics;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-
+using CoordVector = System.Numerics.Vector2;
+using Vector2 = System.Numerics.Vector2;
 namespace Survivor.Classes
 {
     public enum PlayerState
@@ -10,42 +14,32 @@ namespace Survivor.Classes
         Attacking
     }
 
-    public class Player
+    public class Player : GameObject
     {
         private int _health;
         private int _score;
         private int _maxHealth = 100;
-        private Position Position;
 
-        private readonly WorldBounds _bounds;
-
+        public string Direction { get; set; } = "right";
+        public Texture2D SpriteSheet { get; set; }
+        public int TotalFrames { get; set; } = 10;
         public PlayerState State { get; set; } = PlayerState.Idle;
-        public string direction;
 
         public int Health => _health;
         public int Score => _score;
 
-        public (int X, int Y) Coordinates
-        {
-            get
-            {
-                return (Position.Coords.X, Position.Coords.Y);
-            }
+        private Texture2D spriteSheetIdle;
+        private Texture2D spriteSheetRun;
+        private Texture2D currentSprite;
 
-        }
-
-        public void Move(int x, int y)
+        public Player(WorldBounds bounds, Texture2D idleSheet, Texture2D runSheet, int x = 150, int y = 150, int width = 120, int height = 200)
+            : base(bounds, x, y, width, height)
         {
-            Position.Move(x, y);
-        }
-
-        public Player(int x, int y)
-        {
+            spriteSheetIdle = idleSheet;
+            spriteSheetRun = runSheet;
+            currentSprite = spriteSheetIdle;
             _health = _maxHealth;
             _score = 0;
-            _bounds = new WorldBounds();
-            Position = new Position(_bounds, x, y);
-            direction = "right";
         }
 
         public void AddScore(int amount)
@@ -71,6 +65,67 @@ namespace Survivor.Classes
         {
             _health = _maxHealth;
             _score = 0;
+        }
+
+        public void HandleOutOfBounds()
+        {
+            int XCoord = (int)Math.Round(Position.Coords.X);
+            int YCoord = (int)Math.Round(Position.Coords.Y);
+
+            if (XCoord < WorldBounds.WorldStartingBounds.X)
+                XCoord = (int)Math.Round(WorldBounds.WorldStartingBounds.X);
+
+            if (YCoord < WorldBounds.WorldStartingBounds.Y)
+                YCoord = (int)Math.Round(WorldBounds.WorldStartingBounds.Y);
+
+            if (XCoord > WorldBounds.WorldEndingBounds.X)
+                XCoord = (int)Math.Round(WorldBounds.WorldEndingBounds.X);
+
+            if (YCoord > WorldBounds.WorldEndingBounds.Y)
+                YCoord = (int)Math.Round(WorldBounds.WorldEndingBounds.Y);
+
+            CoordVector Coordinates = new(XCoord, YCoord);
+            Position.SetCoords(Coordinates);
+        }
+
+
+
+
+        public override void Draw(SpriteBatch spriteBatch, GameTime gameTime)
+        {
+            switch (State)
+            {
+                case PlayerState.Idle:
+                    currentSprite = spriteSheetIdle;
+                    TotalFrames = 10;
+                    break;
+                case PlayerState.Running:
+                    currentSprite = spriteSheetRun;
+                    TotalFrames = 16;
+                    break;
+                default:
+                    currentSprite = spriteSheetIdle;
+                    TotalFrames = 10;
+                    break;
+            }
+
+            SpriteEffects effects = Direction == "right" ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
+
+            int frameWidth = currentSprite.Width / TotalFrames;
+            int frameHeight = currentSprite.Height;
+            int currentFrame = (int)(gameTime.TotalGameTime.TotalSeconds * 12) % TotalFrames;
+            Rectangle sourceRect = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
+
+            spriteBatch.Draw(
+                currentSprite,
+                new Rectangle((int)Math.Round(Position.Coords.X) - 92, (int)Math.Round(Position.Coords.Y) - 135, 180, 200),
+                sourceRect,
+                Color.White,
+                0f,
+                Vector2.Zero,
+                effects,
+                0f
+            );
         }
     }
 }

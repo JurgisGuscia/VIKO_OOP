@@ -1,22 +1,27 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System;
+using System.Numerics;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using PlayerVector = System.Numerics.Vector2;
+using Vector2 = System.Numerics.Vector2;
 using Survivor.Classes;
-
 namespace Survivor
 {
     public class Game1 : Game
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
+
         Texture2D spriteSheetIdle;
         Texture2D spriteSheetRun;
         Texture2D backgroundTexture;
-        Texture2D currentSprite;
         Texture2D landTexture;
+        private Texture2D _pixel;
 
-        private WorldBounds _worldBounds;
+        private SpriteFont font;
+        private WorldBounds worldBounds;
         private Player _player; 
 
         public Game1()
@@ -25,10 +30,10 @@ namespace Survivor
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            _worldBounds = new WorldBounds();
+            worldBounds = new WorldBounds();
             
-            _graphics.PreferredBackBufferWidth = _worldBounds.Width; 
-            _graphics.PreferredBackBufferHeight = _worldBounds.Height;
+            _graphics.PreferredBackBufferWidth = worldBounds.WorldWidth; 
+            _graphics.PreferredBackBufferHeight = worldBounds.WorldHeight;
             _graphics.ApplyChanges();
 
         }
@@ -47,19 +52,21 @@ namespace Survivor
             {
                 dx -= 5; // Move left
                 _player.State = PlayerState.Running;
-                _player.direction = "left";
+                _player.Direction = "left";
             }
             if (keyboardState.IsKeyDown(Keys.D))
             {
                 dx += 5; // Move right
                 _player.State = PlayerState.Running;
-                _player.direction = "right";
-            } 
-
+                _player.Direction = "right";
+            }
+            
             _player.Move(dx, dy);
+            _player.HandleOutOfBounds();
+            
         }
 
-        private void drawGround(int startingX)
+        private void DrawGround(int startingX)
         {
             _spriteBatch.Draw(
                 landTexture,
@@ -71,7 +78,8 @@ namespace Survivor
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
-            _player = new Player(x: 150, y: _worldBounds.Height - 80);
+            
+            
             base.Initialize();
         }
 
@@ -83,7 +91,13 @@ namespace Survivor
             spriteSheetIdle = Content.Load<Texture2D>("IDLE");
             spriteSheetRun = Content.Load<Texture2D>("RUN");
             landTexture = Content.Load<Texture2D>("4");
+            font = Content.Load<SpriteFont>("DebugFont"); // A tiny default font
+            _player = new Player(worldBounds, spriteSheetIdle, spriteSheetRun, x: 600, y: worldBounds.WorldHeight - 60, 30, 70);
 
+
+
+            _pixel = new Texture2D(GraphicsDevice, 1, 1);
+            _pixel.SetData(new[] { Color.White });
         }   
 
         protected override void Update(GameTime gameTime)
@@ -104,51 +118,28 @@ namespace Survivor
             // TODO: Add your drawing code here
             
             _spriteBatch.Begin();
-            //Player sprite
+        
             _spriteBatch.Draw(
                 backgroundTexture,
                 destinationRectangle: new Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height),
                 color: Color.White
             );
-            drawGround(0);
-            drawGround(500);
-            drawGround(1000);
+            DrawGround(0);
+            DrawGround(500);
+            DrawGround(1000);
             
-            int totalFrames;
+            _spriteBatch.DrawString(font, "Coordinates " + _player.Position.Coords.X + " " +  _player.Position.Coords.Y, new Vector2(10, 10), Color.White);
+            _spriteBatch.DrawString(font, "checkValue " + _player.Size.ObjectSize.X, new Vector2(10, 30), Color.White);
 
-            switch (_player.State)
-            {
-                case PlayerState.Idle:
-                    currentSprite = spriteSheetIdle;
-                    totalFrames = 10;
-                    break;
-                case PlayerState.Running:
-                    currentSprite = spriteSheetRun;
-                    totalFrames = 16;
-                    break;
-                // case PlayerState.Jumping:
-                //     currentSprite = spriteJump;
-                //     totalFrames = 2;
-                //     break;
-                default:
-                    currentSprite = spriteSheetIdle;
-                    totalFrames = 10;
-                    break;
-            }
-            SpriteEffects effects;
-            if (_player.direction == "right")
-                effects = SpriteEffects.None;
-            else
-                effects = SpriteEffects.FlipHorizontally;
+            PlayerVector playerBoxStart = _player.Size.StartPoint(_player.Position.Coords);
+            PlayerVector playerBoxEnd = _player.Size.EndPoint(_player.Position.Coords);
+            
 
-            int frameWidth = currentSprite.Width / totalFrames;
-            int frameHeight = currentSprite.Height;
+            _spriteBatch.DrawString(font, "Start x " + (int)Math.Round(playerBoxStart.X), new Vector2(10, 50), Color.White);
+            _spriteBatch.DrawString(font, "Start y " + (int)Math.Round(playerBoxStart.Y), new Vector2(10, 70), Color.White);
 
-            int currentFrame = (int)(gameTime.TotalGameTime.TotalSeconds * 12) % totalFrames;
-            Rectangle sourceRect = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
-
-            _spriteBatch.Draw(currentSprite, new Rectangle(_player.Coordinates.X - 75, _player.Coordinates.Y - 105, 180, 200), sourceRect, Color.White, 0f, Vector2.Zero, effects, 0f);
-
+            _spriteBatch.Draw(_pixel, new Rectangle((int)Math.Round(playerBoxStart.X), (int)Math.Round(playerBoxStart.Y), (int)Math.Round(_player.Size.ObjectSize.X), (int)Math.Round(_player.Size.ObjectSize.Y)), Color.Red);
+            _player.Draw(_spriteBatch, gameTime);
             _spriteBatch.End();
             base.Draw(gameTime);
         }

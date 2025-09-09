@@ -25,6 +25,13 @@
 /processorParam:TextureFormat=Color
 /build:4.png
 
+#begin File.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:File.spritefont;DebugFont.spritefont
+
 #begin IDLE.png
 /importer:TextureImporter
 /processor:TextureProcessor
