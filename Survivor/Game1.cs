@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Numerics;
+using Microsoft.Xna.Framework.Media;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using PlayerVector = System.Numerics.Vector2;
 using Vector2 = System.Numerics.Vector2;
+using Microsoft.Xna.Framework.Audio; 
 using Survivor.Classes;
 namespace Survivor
 {
@@ -13,12 +15,20 @@ namespace Survivor
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
-
+        Song backgroundSong;
         Texture2D spriteSheetIdle;
         Texture2D spriteSheetRun;
+        Texture2D spriteSheetAttack;
         Texture2D backgroundTexture;
         Texture2D landTexture;
         private Texture2D _pixel;
+        private float attackTimer = 0f;
+        SoundEffectInstance run;
+        SoundEffectInstance jump;
+        SoundEffectInstance land;
+        SoundEffectInstance swing;
+        SoundEffectInstance slash;
+        public int animationTime = 0;
 
         private SpriteFont font;
         private WorldBounds worldBounds;
@@ -31,7 +41,6 @@ namespace Survivor
             IsMouseVisible = true;
 
             worldBounds = new WorldBounds();
-            
             _graphics.PreferredBackBufferWidth = worldBounds.WorldWidth; 
             _graphics.PreferredBackBufferHeight = worldBounds.WorldHeight;
             _graphics.ApplyChanges();
@@ -39,7 +48,7 @@ namespace Survivor
         }
 
 
-        private void HandlePlayerInput()
+        private void HandlePlayerInput(GameTime gameTime)
         {
             var keyboardState = Keyboard.GetState();
             int dx = 0;
@@ -49,6 +58,7 @@ namespace Survivor
             {
                 if (_player.State != PlayerState.Jumping)
                 {
+                    jump.Play();
                     _player.State = PlayerState.Jumping;
                     _player.Velocity.ResetSpeed();
                     _player.Velocity.AddVelocity(new(0, -15f));
@@ -67,6 +77,24 @@ namespace Survivor
                 if(_player.State != PlayerState.Jumping)
                     _player.State = PlayerState.Running;
                 _player.Direction = "right";
+            }
+
+
+            if (attackTimer > 0)
+            {
+                attackTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _player.State = PlayerState.Attacking;
+            }
+            else if (keyboardState.IsKeyDown(Keys.J))
+            {
+                if (animationTime == 0)
+                {
+                    attackTimer = 0.3f;
+                    _player.State = PlayerState.Attacking;
+                    animationTime = 30;
+                    swing.Play(); 
+                }
+                
             }
 
             _player.Walk(dx, dy);
@@ -98,10 +126,44 @@ namespace Survivor
             backgroundTexture = Content.Load<Texture2D>("Summer3");
             spriteSheetIdle = Content.Load<Texture2D>("IDLE");
             spriteSheetRun = Content.Load<Texture2D>("RUN");
+            spriteSheetAttack = Content.Load<Texture2D>("attack");
             landTexture = Content.Load<Texture2D>("4");
             font = Content.Load<SpriteFont>("DebugFont"); // A tiny default font
-            _player = new Player(worldBounds, spriteSheetIdle, spriteSheetRun, x: 600, y: 100, 30, 70);
+            _player = new Player(worldBounds, spriteSheetIdle, spriteSheetRun, spriteSheetAttack, x: 600, y: (int)Math.Round(worldBounds.WorldEndingBounds.Y) - 55, 30, 70);
+            backgroundSong = Content.Load<Song>("Mission");
+            MediaPlayer.IsRepeating = true;   // loop automatically
+            MediaPlayer.Volume = 0.1f;        // 0..1
+            MediaPlayer.Play(backgroundSong);
 
+            SoundEffect ambienceEffect = Content.Load<SoundEffect>("step");
+            run = ambienceEffect.CreateInstance();
+            run.IsLooped = true;
+            run.Volume = 0.2f;
+            run.Pitch = -0.2f;
+            
+            ambienceEffect = Content.Load<SoundEffect>("jump");
+            jump = ambienceEffect.CreateInstance();
+            jump.IsLooped = false;
+            jump.Volume = 0.2f;
+            jump.Pitch = 0f;
+
+            ambienceEffect = Content.Load<SoundEffect>("land");
+            land = ambienceEffect.CreateInstance();
+            land.IsLooped = false;
+            land.Volume = 0.2f;
+            land.Pitch = 0f;
+
+            ambienceEffect = Content.Load<SoundEffect>("swing");
+            swing = ambienceEffect.CreateInstance();
+            swing.IsLooped = false;
+            swing.Volume = 0.2f;
+            swing.Pitch = 0f;
+
+            ambienceEffect = Content.Load<SoundEffect>("slash");
+            slash = ambienceEffect.CreateInstance();
+            slash.IsLooped = false;
+            slash.Volume = 0.2f;
+            slash.Pitch = 0f; 
 
 
             _pixel = new Texture2D(GraphicsDevice, 1, 1);
@@ -119,23 +181,33 @@ namespace Survivor
                 _player.Velocity.AddVelocity(new(0, 0.5f));
             }
             else
-            {
+            { 
                 _player.Velocity.ResetSpeed();
             }
             _player.Update();
 
-
+            
             base.Update(gameTime);
         }
 
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-            HandlePlayerInput();
+            HandlePlayerInput(gameTime);
+            if (_player.State == PlayerState.Running)
+            {
+                run.Play();
+            }
+            else
+            {
+                run.Pause();
+            }
             
+            if(_player.State == PlayerState.Jumping && _player.Position.Coords.Y > worldBounds.WorldEndingBounds.Y - 51 && _player.Velocity.Speed.Y > 0)
+                land.Play();
             // TODO: Add your drawing code here
-            
-            _spriteBatch.Begin();
+
+                _spriteBatch.Begin();
         
             _spriteBatch.Draw(
                 backgroundTexture,
@@ -164,6 +236,8 @@ namespace Survivor
             _player.Draw(_spriteBatch, gameTime);
 
             _spriteBatch.End();
+            if (animationTime > 0)
+                animationTime--;
             base.Draw(gameTime);
         }
     }

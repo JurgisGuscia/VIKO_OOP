@@ -23,20 +23,22 @@ namespace Survivor.Classes
         public string Direction { get; set; } = "right";
         public Texture2D SpriteSheet { get; set; }
         public int TotalFrames { get; set; } = 10;
-        public PlayerState State { get; set; } = PlayerState.Idle;
+        public PlayerState State { get; set; } = PlayerState.Jumping;
 
         public int Health => _health;
         public int Score => _score;
 
         private Texture2D spriteSheetIdle;
         private Texture2D spriteSheetRun;
+        private Texture2D spriteSheetAttack;
         private Texture2D currentSprite;
 
-        public Player(WorldBounds bounds, Texture2D idleSheet, Texture2D runSheet, int x = 150, int y = 150, int width = 120, int height = 200, float speedX = 0, float speedY = 0)
+        public Player(WorldBounds bounds, Texture2D idleSheet, Texture2D runSheet, Texture2D attackSheet, int x = 150, int y = 150, int width = 120, int height = 200, float speedX = 0, float speedY = 0)
             : base(bounds, x, y, width, height, speedX, speedY)
         {
             spriteSheetIdle = idleSheet;
             spriteSheetRun = runSheet;
+            spriteSheetAttack = attackSheet;
             currentSprite = spriteSheetIdle;
             _health = _maxHealth;
             _score = 0;
@@ -92,8 +94,6 @@ namespace Survivor.Classes
         }
 
 
-
-
         public override void Draw(SpriteBatch spriteBatch, GameTime gameTime)
         {
             switch (State)
@@ -106,6 +106,10 @@ namespace Survivor.Classes
                     currentSprite = spriteSheetRun;
                     TotalFrames = 16;
                     break;
+                case PlayerState.Attacking:
+                    currentSprite = spriteSheetAttack;
+                    TotalFrames = 7;
+                    break;
                 default:
                     currentSprite = spriteSheetIdle;
                     TotalFrames = 10;
@@ -116,19 +120,19 @@ namespace Survivor.Classes
 
             int frameWidth = currentSprite.Width / TotalFrames;
             int frameHeight = currentSprite.Height;
-            int currentFrame = (int)(gameTime.TotalGameTime.TotalSeconds * 12) % TotalFrames;
+            int currentFrame = (int)(gameTime.TotalGameTime.TotalSeconds * 24) % TotalFrames;
             Rectangle sourceRect = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
 
             spriteBatch.Draw(
-                currentSprite,
-                new Rectangle((int)Math.Round(Position.Coords.X) - 92, (int)Math.Round(Position.Coords.Y) - 135, 180, 200),
-                sourceRect,
-                Color.White,
-                0f,
-                Vector2.Zero,
-                effects,
-                0f
-            );
+                 currentSprite,
+                 new Rectangle((int)Math.Round(Position.Coords.X) - 92, (int)Math.Round(Position.Coords.Y) - 135, 180, 200),
+                 sourceRect,
+                 Color.White,
+                 0f,
+                 Vector2.Zero,
+                 effects,
+                 0f
+                );
         }
 
         public override void Update()

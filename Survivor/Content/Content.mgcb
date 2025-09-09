@@ -13,6 +13,12 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin ../../../step.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:../../../step.wav;step.wav
+
 #begin 4.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -24,6 +30,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:4.png
+
+#begin attack.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:attack.png
 
 #begin File.spritefont
 /importer:FontDescriptionImporter
@@ -44,6 +62,24 @@
 /processorParam:TextureFormat=Color
 /build:IDLE.png
 
+#begin jump.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:jump.wav
+
+#begin land.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:land.wav
+
+#begin Mission.mp3
+/importer:Mp3Importer
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Mission.mp3
+
 #begin RUN.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -56,6 +92,12 @@
 /processorParam:TextureFormat=Color
 /build:RUN.png
 
+#begin slash.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:slash.wav
+
 #begin Summer3.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -67,4 +109,10 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Summer3.png
+
+#begin swing.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:swing.wav
 
