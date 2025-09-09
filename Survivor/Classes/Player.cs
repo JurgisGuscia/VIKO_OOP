@@ -32,8 +32,8 @@ namespace Survivor.Classes
         private Texture2D spriteSheetRun;
         private Texture2D currentSprite;
 
-        public Player(WorldBounds bounds, Texture2D idleSheet, Texture2D runSheet, int x = 150, int y = 150, int width = 120, int height = 200)
-            : base(bounds, x, y, width, height)
+        public Player(WorldBounds bounds, Texture2D idleSheet, Texture2D runSheet, int x = 150, int y = 150, int width = 120, int height = 200, float speedX = 0, float speedY = 0)
+            : base(bounds, x, y, width, height, speedX, speedY)
         {
             spriteSheetIdle = idleSheet;
             spriteSheetRun = runSheet;
@@ -81,8 +81,11 @@ namespace Survivor.Classes
             if (XCoord > WorldBounds.WorldEndingBounds.X)
                 XCoord = (int)Math.Round(WorldBounds.WorldEndingBounds.X);
 
-            if (YCoord > WorldBounds.WorldEndingBounds.Y)
-                YCoord = (int)Math.Round(WorldBounds.WorldEndingBounds.Y);
+            if (YCoord > WorldBounds.WorldEndingBounds.Y - 50)
+            {
+                State = PlayerState.Idle;
+                YCoord = (int)Math.Round(WorldBounds.WorldEndingBounds.Y - 50);
+            }
 
             CoordVector Coordinates = new(XCoord, YCoord);
             Position.SetCoords(Coordinates);
@@ -126,6 +129,22 @@ namespace Survivor.Classes
                 effects,
                 0f
             );
+        }
+
+        public override void Update()
+        {
+            Velocity.ApplyVelocity();
+            Position.Move(Velocity.Speed);
+            //Velocity.ResetSpeed();
+            Velocity.ResetVelocity();
+            if (Velocity.Speed.Y == 0 && Velocity.Velocity.Y == 0 && Position.Coords.Y == WorldBounds.WorldEndingBounds.Y - 50)
+            {
+                State = PlayerState.Idle;
+            }
+            else
+            {
+                State = PlayerState.Jumping; 
+            }
         }
     }
 }
