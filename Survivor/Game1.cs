@@ -184,7 +184,7 @@ namespace Survivor
             //initiate background music loop
             backgroundSong = Content.Load<Song>("Mission");
             MediaPlayer.IsRepeating = true;   // loop automatically
-            MediaPlayer.Volume = 0.1f;        // 0..1
+            MediaPlayer.Volume = 0.05f;        // 0..1
             MediaPlayer.Play(backgroundSong);
 
             //create run sound for player
@@ -296,6 +296,11 @@ namespace Survivor
 
         public void resetGame()
         {
+            //reset game world
+            gameLevel = 1;
+            gameResetTimer = 500;
+            gamePaused = false;
+
             //reset player
             _player = null;
             spriteSheetIdle = Content.Load<Texture2D>("IDLE");
@@ -312,13 +317,7 @@ namespace Survivor
             spriteSheetAttack = Content.Load<Texture2D>("zombie_attack");
             spriteSheetDead = Content.Load<Texture2D>("zombie_death");
             FillEnemies(gameLevel * 10);
-
-            //reset game world
-            gameLevel = 1;
-            gameResetTimer = 500;
-            gamePaused = false;
         }
-
 
         protected override void Update(GameTime gameTime)
         {
