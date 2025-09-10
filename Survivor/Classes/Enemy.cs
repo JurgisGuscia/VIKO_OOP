@@ -17,19 +17,17 @@ namespace Survivor.Classes
     {
         private int _health;
 
-        public string Direction { get; set; } = "right";
-        public int TotalFrames { get; set; } = 10;
-
-        public Texture2D SpriteSheet { get; set; }
-        public EnemyState State { get; set; } = EnemyState.Jumping;
-        public int Health => _health;
-
         private Texture2D spriteSheetIdle;
         private Texture2D spriteSheetRun;
         private Texture2D spriteSheetAttack;
         private Texture2D currentSprite;
         private Texture2D spriteSheetDead;
 
+        public string Direction { get; set; } = "right";
+        public int TotalFrames { get; set; } = 10;
+        public EnemyState State { get; set; } = EnemyState.Jumping;
+        public int Health => _health;
+        public Texture2D SpriteSheet { get; set; }
         public int DeathFrames = 6;
 
         public Enemy(WorldBounds bounds, Texture2D idleSheet, Texture2D runSheet, Texture2D attackSheet, Texture2D deathSheet, int x = 150, int y = 120, int width = 120, int height = 200, float speedX = 0, float speedY = 0)
@@ -70,46 +68,46 @@ namespace Survivor.Classes
             Position.SetCoords(Coordinates);
         }
 
-
+        public void SelectSprite() {
+            switch (State)
+            {
+                case EnemyState.Idle:
+                    currentSprite = spriteSheetIdle;
+                    TotalFrames = 8;
+                    break;
+                case EnemyState.Running:
+                    currentSprite = spriteSheetRun;
+                    TotalFrames = 8;
+                    break;
+                case EnemyState.Attacking:
+                    currentSprite = spriteSheetAttack;
+                    TotalFrames = 5;
+                    break;
+                case EnemyState.Dead:
+                    currentSprite = spriteSheetDead;
+                    TotalFrames = 5;
+                    break;
+                default:
+                    currentSprite = spriteSheetIdle;
+                    TotalFrames = 8;
+                    break;
+            }
+        }
 
         public override void Draw(SpriteBatch spriteBatch, GameTime gameTime)
         {
-            if (State != EnemyState.Dead)
-            {
-                switch (State)
-                {
-                    case EnemyState.Idle:
-                        currentSprite = spriteSheetIdle;
-                        TotalFrames = 8;
-                        break;
-                    case EnemyState.Running:
-                        currentSprite = spriteSheetRun;
-                        TotalFrames = 8;
-                        break;
-                    case EnemyState.Attacking:
-                        currentSprite = spriteSheetAttack;
-                        TotalFrames = 5;
-                        break;
-                    case EnemyState.Dead:
-                        currentSprite = spriteSheetDead;
-                        TotalFrames = 5;
-                        break;
-                    default:
-                        currentSprite = spriteSheetIdle;
-                        TotalFrames = 8;
-                        break;
-                }
-            }
-            else
+            if (State == EnemyState.Dead)
             {
                 currentSprite = spriteSheetDead;
                 TotalFrames = 5;
             }
+            if (State != EnemyState.Dead)
+                SelectSprite();            
 
             SpriteEffects effects = Direction == "right" ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
             int frameWidth = currentSprite.Width / TotalFrames;
             int frameHeight = currentSprite.Height;
-            int currentFrame = (int)(gameTime.TotalGameTime.TotalSeconds * 24) % TotalFrames;
+            int currentFrame = (int)(gameTime.TotalGameTime.TotalSeconds * 6) % TotalFrames;
             Rectangle sourceRect = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
 
             spriteBatch.Draw(
@@ -126,7 +124,6 @@ namespace Survivor.Classes
 
         public CoordVector GetVelocity(CoordVector playerPosition)
         {
-            
             if (playerPosition.X < Position.Coords.X)
             {
                 Direction = "left";
@@ -137,7 +134,6 @@ namespace Survivor.Classes
                 Direction = "right";
                 return (new(0.1f, 0));
             }
-            
         }
 
         public override void Update(CoordVector playerPosition)
@@ -148,10 +144,13 @@ namespace Survivor.Classes
                 Velocity.ApplyVelocity();
                 Position.Move(Velocity.Speed);
                 Velocity.ResetVelocity();
+
                 if (Velocity.Speed.X > 2)
                     Velocity.SetSpeedX(2f);
+
                 if (Velocity.Speed.X < -2)
                     Velocity.SetSpeedX(-2f);
+
                 if (Velocity.Speed.Y == 0 && Velocity.Velocity.Y == 0 && Position.Coords.Y == WorldBounds.WorldEndingBounds.Y - 50)
                 {
                     State = EnemyState.Running;

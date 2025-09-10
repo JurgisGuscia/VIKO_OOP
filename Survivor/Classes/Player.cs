@@ -19,6 +19,11 @@ namespace Survivor.Classes
         private int _score;
         private int _maxHealth = 100;
 
+        private Texture2D spriteSheetIdle;
+        private Texture2D spriteSheetRun;
+        private Texture2D spriteSheetAttack;
+        private Texture2D currentSprite;
+
         public string Direction { get; set; } = "right";
         public Texture2D SpriteSheet { get; set; }
         public int TotalFrames { get; set; } = 10;
@@ -26,11 +31,6 @@ namespace Survivor.Classes
 
         public int Health => _health;
         public int Score => _score;
-
-        private Texture2D spriteSheetIdle;
-        private Texture2D spriteSheetRun;
-        private Texture2D spriteSheetAttack;
-        private Texture2D currentSprite;
 
         public Player(WorldBounds bounds, Texture2D idleSheet, Texture2D runSheet, Texture2D attackSheet, Texture2D spriteSheetDead, int x = 150, int y = 150, int width = 120, int height = 200, float speedX = 0, float speedY = 0)
             : base(bounds, x, y, width, height, speedX, speedY)
@@ -43,30 +43,11 @@ namespace Survivor.Classes
             _score = 0;
         }
 
-        public void AddScore(int amount)
-        {
-            _score += amount;
-        }
+        public void AddScore(int amount) => _score += amount;
 
-        public void TakeDamage(int amount)
-        {
-            _health -= amount;
-            if (_health < 0)
-                _health = 0;
-        }
 
-        public void Heal(int amount)
-        {
-            _health += amount;
-            if (_health > _maxHealth)
-                _health = _maxHealth;
-        }
-
-        public void Reset()
-        {
-            _health = _maxHealth;
-            _score = 0;
-        }
+        public void TakeDamage(int amount) => _health -= amount;
+        
 
         public void HandleOutOfBounds()
         {
@@ -93,7 +74,7 @@ namespace Survivor.Classes
         }
 
 
-        public override void Draw(SpriteBatch spriteBatch, GameTime gameTime)
+        public void SelectSprite()
         {
             switch (State)
             {
@@ -114,9 +95,13 @@ namespace Survivor.Classes
                     TotalFrames = 10;
                     break;
             }
+        }
+
+        public override void Draw(SpriteBatch spriteBatch, GameTime gameTime)
+        {
+            SelectSprite();
 
             SpriteEffects effects = Direction == "right" ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
-
             int frameWidth = currentSprite.Width / TotalFrames;
             int frameHeight = currentSprite.Height;
             int currentFrame = (int)(gameTime.TotalGameTime.TotalSeconds * 24) % TotalFrames;
