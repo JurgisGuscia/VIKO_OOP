@@ -2,7 +2,7 @@ using System.Numerics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MoveVector = System.Numerics.Vector2;
-
+using CoordVector = System.Numerics.Vector2;
 namespace Survivor.Classes
 {
     public abstract class GameObject
@@ -36,6 +36,6 @@ namespace Survivor.Classes
 
         public abstract void Draw(SpriteBatch spriteBatch, GameTime gameTime);
 
-        public abstract void Update();
+        public abstract void Update(CoordVector playerPosition);
     }
 }

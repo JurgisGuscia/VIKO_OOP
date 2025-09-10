@@ -14,7 +14,9 @@ namespace Survivor.Classes
         public void ApplyVelocity() => _speed += _velocity;
 
         public void ResetVelocity() => _velocity *= Vector2.Zero;
+        public void SetSpeedX(float speed) => _speed.X = speed;
         public void ResetSpeed() => _speed *= Vector2.Zero;
-
+        public void ResetSpeedX() => _speed.X *= 0f;
+        public void ResetSpeedY() => _speed.Y *= 0f;
     }
 }

@@ -1,5 +1,4 @@
 using System;
-using System.Numerics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using CoordVector = System.Numerics.Vector2;
@@ -33,7 +32,7 @@ namespace Survivor.Classes
         private Texture2D spriteSheetAttack;
         private Texture2D currentSprite;
 
-        public Player(WorldBounds bounds, Texture2D idleSheet, Texture2D runSheet, Texture2D attackSheet, int x = 150, int y = 150, int width = 120, int height = 200, float speedX = 0, float speedY = 0)
+        public Player(WorldBounds bounds, Texture2D idleSheet, Texture2D runSheet, Texture2D attackSheet, Texture2D spriteSheetDead, int x = 150, int y = 150, int width = 120, int height = 200, float speedX = 0, float speedY = 0)
             : base(bounds, x, y, width, height, speedX, speedY)
         {
             spriteSheetIdle = idleSheet;
@@ -135,11 +134,10 @@ namespace Survivor.Classes
                 );
         }
 
-        public override void Update()
+        public override void Update(CoordVector playerPosition)
         {
             Velocity.ApplyVelocity();
             Position.Move(Velocity.Speed);
-            //Velocity.ResetSpeed();
             Velocity.ResetVelocity();
             if (Velocity.Speed.Y == 0 && Velocity.Velocity.Y == 0 && Position.Coords.Y == WorldBounds.WorldEndingBounds.Y - 50)
             {
