@@ -152,13 +152,9 @@ namespace Survivor.Classes
                     Velocity.SetSpeedX(-2f);
 
                 if (Velocity.Speed.Y == 0 && Velocity.Velocity.Y == 0 && Position.Coords.Y == WorldBounds.WorldEndingBounds.Y - 50)
-                {
                     State = EnemyState.Running;
-                }
                 else
-                {
                     State = EnemyState.Jumping;
-                }
             }
         }
     }

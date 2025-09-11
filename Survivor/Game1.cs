@@ -226,30 +226,14 @@ namespace Survivor
             }
         }
 
-        public bool CheckCollision(Vector2[] playerBodyCorners, Vector2 enemyBodyStart, Vector2 enemyBodyEnd) {
-            bool collision = false;
+        public bool CheckCollision(Vector2[] playerBodyCorners, Vector2 enemyBodyStart, Vector2 enemyBodyEnd)
+        {
+            for (int i = 0; i < 4; i++)
+                if (playerBodyCorners[i].X > enemyBodyStart.X && playerBodyCorners[i].X < enemyBodyEnd.X &&
+                    playerBodyCorners[i].Y > enemyBodyStart.Y && playerBodyCorners[i].Y < enemyBodyEnd.Y)
+                    return true;
 
-            //top left corner collision
-            if (playerBodyCorners[0].X > enemyBodyStart.X && playerBodyCorners[0].X < enemyBodyEnd.X &&
-                playerBodyCorners[0].Y > enemyBodyStart.Y && playerBodyCorners[0].Y < enemyBodyEnd.Y)
-                collision = true;
-
-            //top right corner collision
-            if (playerBodyCorners[1].X > enemyBodyStart.X && playerBodyCorners[1].X < enemyBodyEnd.X &&
-                playerBodyCorners[1].Y > enemyBodyStart.Y && playerBodyCorners[1].Y < enemyBodyEnd.Y)
-                collision = true;
-
-            //bottom left corner collision
-            if (playerBodyCorners[2].X > enemyBodyStart.X && playerBodyCorners[2].X < enemyBodyEnd.X &&
-                playerBodyCorners[2].Y > enemyBodyStart.Y && playerBodyCorners[2].Y < enemyBodyEnd.Y)
-                collision = true;
-
-            //bottom right corner collision
-            if (playerBodyCorners[3].X > enemyBodyStart.X && playerBodyCorners[3].X < enemyBodyEnd.X &&
-                playerBodyCorners[3].Y > enemyBodyStart.Y && playerBodyCorners[3].Y < enemyBodyEnd.Y)
-                collision = true;
-
-            return collision;
+            return false;
         }
 
         public void CheckDamageTaken()

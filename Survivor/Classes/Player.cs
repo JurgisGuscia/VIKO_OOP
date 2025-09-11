@@ -121,13 +121,9 @@ namespace Survivor.Classes
             Position.Move(Velocity.Speed);
             Velocity.ResetVelocity();
             if (Velocity.Speed.Y == 0 && Velocity.Velocity.Y == 0 && Position.Coords.Y == WorldBounds.WorldEndingBounds.Y - 50)
-            {
                 State = PlayerState.Idle;
-            }
             else
-            {
                 State = PlayerState.Jumping; 
-            }
         }
     }
 }
