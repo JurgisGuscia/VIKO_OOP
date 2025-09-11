@@ -13,7 +13,6 @@ namespace Survivor
 {
     public class Game1 : Game
     {
-        
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private float attackTimer = 0f;
@@ -45,6 +44,7 @@ namespace Survivor
         SoundEffectInstance jump;
         SoundEffectInstance land;
         SoundEffectInstance swing;
+        SoundEffect ambienceEffect;
         
         Random random = new Random();
 
@@ -161,6 +161,14 @@ namespace Survivor
                 }
         }
 
+        public void LoadSound(ref SoundEffectInstance sound, string song, bool repeat, float volume, float pitch) {
+            ambienceEffect = Content.Load<SoundEffect>(song);
+            sound = ambienceEffect.CreateInstance();
+            sound.IsLooped = repeat;
+            sound.Volume = volume;
+            sound.Pitch = pitch;
+        }
+
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
@@ -171,6 +179,7 @@ namespace Survivor
             spriteSheetAttack = Content.Load<Texture2D>("attack");
             spriteSheetDead = Content.Load<Texture2D>("IDLE");
             landTexture = Content.Load<Texture2D>("4");
+
             font = Content.Load<SpriteFont>("DebugFont"); // A tiny default font
             _player = new Player(worldBounds, spriteSheetIdle, spriteSheetRun, spriteSheetAttack, spriteSheetDead, x: 600, y: (int)Math.Round(worldBounds.WorldEndingBounds.Y) - 55, 28, 67);
 
@@ -186,35 +195,13 @@ namespace Survivor
             MediaPlayer.IsRepeating = true;   // loop automatically
             MediaPlayer.Volume = 0.05f;        // 0..1
             MediaPlayer.Play(backgroundSong);
-
-            //create run sound for player
-            SoundEffect ambienceEffect = Content.Load<SoundEffect>("step");
-            run = ambienceEffect.CreateInstance();
-            run.IsLooped = true;
-            run.Volume = 0.2f;
-            run.Pitch = -0.2f;
-
-            //create jump sound for player
-            ambienceEffect = Content.Load<SoundEffect>("jump");
-            jump = ambienceEffect.CreateInstance();
-            jump.IsLooped = false;
-            jump.Volume = 0.2f;
-            jump.Pitch = 0f;
-
-            //create land sound for player
-            ambienceEffect = Content.Load<SoundEffect>("land");
-            land = ambienceEffect.CreateInstance();
-            land.IsLooped = false;
-            land.Volume = 0.2f;
-            land.Pitch = 0f;
-
-            //create sword swing sound
-            ambienceEffect = Content.Load<SoundEffect>("swing");
-            swing = ambienceEffect.CreateInstance();
-            swing.IsLooped = false;
-            swing.Volume = 0.2f;
-            swing.Pitch = 0f;
             
+            //load player sounds
+            LoadSound(ref run, "step", false, 0.2f, -0.2f);
+            LoadSound(ref jump, "jump", false, 0.2f, -0.2f);
+            LoadSound(ref land, "land", false, 0.2f, -0.2f);
+            LoadSound(ref swing, "swing", false, 0.2f, -0.2f);
+
             //create pixel for text drawing
             _pixel = new Texture2D(GraphicsDevice, 1, 1);
             _pixel.SetData(new[] { Color.White });
@@ -264,7 +251,6 @@ namespace Survivor
 
             return collision;
         }
-
 
         public void CheckDamageTaken()
         {

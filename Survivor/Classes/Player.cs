@@ -45,9 +45,7 @@ namespace Survivor.Classes
 
         public void AddScore(int amount) => _score += amount;
 
-
         public void TakeDamage(int amount) => _health -= amount;
-        
 
         public void HandleOutOfBounds()
         {
@@ -68,11 +66,9 @@ namespace Survivor.Classes
                 State = PlayerState.Idle;
                 YCoord = (int)Math.Round(WorldBounds.WorldEndingBounds.Y - 50);
             }
-
             CoordVector Coordinates = new(XCoord, YCoord);
             Position.SetCoords(Coordinates);
         }
-
 
         public void SelectSprite()
         {
