@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using CoordVector = System.Numerics.Vector2;
+using Survivor.Classes;
 namespace Survivor.Classes
 {
     public enum EnemyState

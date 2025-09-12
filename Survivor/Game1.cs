@@ -24,6 +24,10 @@ namespace Survivor
         private WorldBounds worldBounds;
         private Player _player;
         private static int _enemyCount = 100;
+        private int _spawnedEnemies = 0;
+        private int _enemySpawnPerCycle = 5;
+        private int _enemySpawnCountDown = 0;
+        private int _enemySpawnClock = 100;
 
         public int animationTime = 0;
         public bool gamePaused = false;
@@ -151,17 +155,43 @@ namespace Survivor
 
         protected override void Initialize() => base.Initialize();
 
-        public void FillEnemies(int enemyCount) {
-            for (int i = 0; i < enemyCount; i++)
-                if (enemies[i] == null)
-                {
-                    int XPosition = random.Next(40, (int)Math.Round(worldBounds.WorldEndingBounds.X));
-                    int YPosition = random.Next(40, (int)Math.Round(worldBounds.WorldEndingBounds.Y) - 200);
-                    enemies[i] = new Enemy(worldBounds, spriteSheetIdle, spriteSheetRun, spriteSheetAttack, spriteSheetDead, x: XPosition, y: YPosition, 30, 70);
-                }
+        public void FillEnemies()
+        {
+            int enemyCount = gameLevel * 10;
+            if (_enemySpawnCountDown < 1)
+            {
+                for (int j = 0; j < _enemySpawnPerCycle; j++)
+                    if (_spawnedEnemies < enemyCount)
+                        for (int i = 0; i < _enemyCount; i++)
+                            if (enemies[i] == null)
+                            {
+                                int XPosition;
+                                int pickSide = random.Next(1, 3);
+                                
+                                if (pickSide == 1)
+                                    XPosition = random.Next((int)Math.Round(worldBounds.WorldEndingBounds.X * 0.05), (int)Math.Round(worldBounds.WorldEndingBounds.X * 0.2));
+                                else
+                                    XPosition = random.Next((int)Math.Round(worldBounds.WorldEndingBounds.X * 0.8), (int)Math.Round(worldBounds.WorldEndingBounds.X * 0.95));
+
+                                int YPosition = random.Next(40, (int)Math.Round(worldBounds.WorldEndingBounds.Y) - 200);
+                                enemies[i] = new Enemy(worldBounds, spriteSheetIdle, spriteSheetRun, spriteSheetAttack, spriteSheetDead, x: XPosition, y: YPosition, 30, 70);
+                                _spawnedEnemies++;
+                                break;
+                            }
+                _enemySpawnCountDown = _enemySpawnClock;
+            }
+            else
+                _enemySpawnCountDown--;          
         }
 
-        public void LoadSound(ref SoundEffectInstance sound, string song, bool repeat, float volume, float pitch) {
+        public void ResetEnemies()
+        {
+            for (int i = 0; i < _enemyCount; i++)
+                enemies[i] = null;
+        }
+
+        public void LoadSound(ref SoundEffectInstance sound, string song, bool repeat, float volume, float pitch)
+        {
             ambienceEffect = Content.Load<SoundEffect>(song);
             sound = ambienceEffect.CreateInstance();
             sound.IsLooped = repeat;
@@ -188,7 +218,7 @@ namespace Survivor
             spriteSheetRun = Content.Load<Texture2D>("zombie_walk");
             spriteSheetAttack = Content.Load<Texture2D>("zombie_attack");
             spriteSheetDead = Content.Load<Texture2D>("zombie_death");
-            FillEnemies(gameLevel * 10);
+            FillEnemies();
 
             //initiate background music loop
             backgroundSong = Content.Load<Song>("Mission");
@@ -207,23 +237,16 @@ namespace Survivor
             _pixel.SetData(new[] { Color.White });
         }
 
-        public void CheckLevelUp()
+        public bool CheckLevelUp()
         {
-            //check if all enemies are dead
-            bool levelCompleted = true;
-            for (int i = 0; i < _enemyCount; i++)
-                if (enemies[i] != null)
-                    levelCompleted = false;
-
-            //if all enemies are dead, increase level
-            if (levelCompleted)
-            {
-                gameLevel++;
-                if (gameLevel + 10 > 100)
-                    FillEnemies(100);
-                else
-                    FillEnemies(gameLevel + 10);
+            if (_spawnedEnemies >= gameLevel * 10){
+                for (int i = 0; i < _enemyCount; i++)
+                    if (enemies[i] != null)
+                        return false;
             }
+            else
+                return false;
+            return true;
         }
 
         public bool CheckCollision(Vector2[] playerBodyCorners, Vector2 enemyBodyStart, Vector2 enemyBodyEnd)
@@ -270,6 +293,7 @@ namespace Survivor
             gameLevel = 1;
             gameResetTimer = 500;
             gamePaused = false;
+            _spawnedEnemies = 0;
 
             //reset player
             _player = null;
@@ -280,19 +304,19 @@ namespace Survivor
             _player = new Player(worldBounds, spriteSheetIdle, spriteSheetRun, spriteSheetAttack, spriteSheetDead, x: 600, y: (int)Math.Round(worldBounds.WorldEndingBounds.Y) - 55, 28, 67);
 
             //reset enemies
-            for (int i = 0; i < _enemyCount; i++)
-                enemies[i] = null;
+            ResetEnemies();
             spriteSheetIdle = Content.Load<Texture2D>("zombie_idle");
             spriteSheetRun = Content.Load<Texture2D>("zombie_walk");
             spriteSheetAttack = Content.Load<Texture2D>("zombie_attack");
             spriteSheetDead = Content.Load<Texture2D>("zombie_death");
-            FillEnemies(gameLevel * 10);
+            FillEnemies();
         }
 
         protected override void Update(GameTime gameTime)
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
+            
             //if game is paused, don't run update
             if (!gamePaused)
             {
@@ -312,7 +336,7 @@ namespace Survivor
                             enemies[i].Velocity.AddVelocity(new(0, 0.5f));
                         else
                             enemies[i].Velocity.ResetSpeedY();
-                        
+
                         //if enemy is dead, add score and remove enemy from array
                         if (enemies[i].State == EnemyState.Dead)
                             //remove enemy from array after animation plays out
@@ -330,12 +354,25 @@ namespace Survivor
                 //check if player took damage
                 CheckDamageTaken();
                 //check if should level up
-                CheckLevelUp();
+                if (CheckLevelUp())
+                {
+                    gameLevel++;
+                    _spawnedEnemies = 0;
+                }
+                else
+                    FillEnemies();
                 if (_player.Health < 1)
                     gamePaused = true;
-
                 //reduce invulnerability timer
                 invulnerabilityTimeLeft--;
+            }
+            else
+            {
+                if (gameResetTimer < 1)
+                    resetGame();
+                else
+                    gameResetTimer--;
+
             }
             base.Update(gameTime);
 
@@ -417,10 +454,7 @@ namespace Survivor
                 _spriteBatch.DrawString(font, "Game will restart in : " + (gameResetTimer / 100), new Vector2(600, 360), Color.Red);
 
                 _spriteBatch.End();
-                if (gameResetTimer < 1)
-                    resetGame();
-                else
-                    gameResetTimer--;
+                
             }
             base.Draw(gameTime);
 
