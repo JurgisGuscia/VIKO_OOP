@@ -7,8 +7,10 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using PlayerVector = System.Numerics.Vector2;
 using Vector2 = System.Numerics.Vector2;
-using Microsoft.Xna.Framework.Audio; 
-using Survivor.Classes;
+using Microsoft.Xna.Framework.Audio;
+using Survivor.Classes.Core;
+using CoordVector = System.Numerics.Vector2;
+using Survivor.Classes.Core.Components; 
 namespace Survivor
 {
     public class Game1 : Game
@@ -36,10 +38,6 @@ namespace Survivor
         public Vector2 damageZoneStart;
         public Vector2 damageZoneEnd;
 
-        Texture2D spriteSheetIdle;
-        Texture2D spriteSheetRun;
-        Texture2D spriteSheetAttack;
-        Texture2D spriteSheetDead;
         Texture2D backgroundTexture;
         Texture2D landTexture;
 
@@ -73,10 +71,10 @@ namespace Survivor
 
             //Handle walking actions
             if (keyboardState.IsKeyDown(Keys.W))
-                if (_player.State != PlayerState.Jumping)
+                if (_player.State != State.Jumping)
                 {
                     jump.Play();
-                    _player.State = PlayerState.Jumping;
+                    _player.SetState(State.Jumping);
                     _player.Velocity.ResetSpeed();
                     _player.Velocity.AddVelocity(new(0, -15f));
                 }
@@ -84,16 +82,16 @@ namespace Survivor
             if (keyboardState.IsKeyDown(Keys.A))
             {
                 dx -= 5; // Move left
-                if (_player.State != PlayerState.Jumping)
-                    _player.State = PlayerState.Running;
+                if (_player.State != State.Jumping)
+                    _player.SetState(State.Running);
                 _player.Direction = "left";
             }
             
             if (keyboardState.IsKeyDown(Keys.D))
             {
                 dx += 5; // Move right
-                if (_player.State != PlayerState.Jumping)
-                    _player.State = PlayerState.Running;
+                if (_player.State != State.Jumping)
+                    _player.SetState(State.Running);
                 _player.Direction = "right";
             }
 
@@ -101,7 +99,7 @@ namespace Survivor
             if (attackTimer > 0)
             {
                 attackTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-                _player.State = PlayerState.Attacking;
+                _player.SetState(State.Attacking);
             }
             //handle attack input
             else if (keyboardState.IsKeyDown(Keys.J))
@@ -109,7 +107,7 @@ namespace Survivor
                 if (animationTime == 0)
                 {
                     attackTimer = 0.3f;
-                    _player.State = PlayerState.Attacking;
+                    _player.SetState(State.Attacking);
                     animationTime = 30;
                     swing.Play();
 
@@ -128,13 +126,9 @@ namespace Survivor
                     {
                         if (enemies[i] != null)
                         {
-                            if (enemies[i].Position.Coords.X > damageZoneStart.X &&
-                                enemies[i].Position.Coords.X < damageZoneEnd.X &&
-                                enemies[i].Position.Coords.Y > damageZoneStart.Y &&
-                                enemies[i].Position.Coords.Y < damageZoneEnd.Y)
-                            {
-                                enemies[i].State = EnemyState.Dead;
-                            }
+                            if (enemies[i].Position.Coords.X > damageZoneStart.X && enemies[i].Position.Coords.X < damageZoneEnd.X &&
+                                    enemies[i].Position.Coords.Y > damageZoneStart.Y && enemies[i].Position.Coords.Y < damageZoneEnd.Y)
+                                enemies[i].SetState(State.Dead); 
                         }
                     }
                 }
@@ -155,8 +149,28 @@ namespace Survivor
 
         protected override void Initialize() => base.Initialize();
 
+         public void LoadSound(ref SoundEffectInstance sound, string song, bool repeat, float volume, float pitch)
+        {
+            ambienceEffect = Content.Load<SoundEffect>(song);
+            sound = ambienceEffect.CreateInstance();
+            sound.IsLooped = repeat;
+            sound.Volume = volume;
+            sound.Pitch = pitch;
+        }
+    
         public void FillEnemies()
         {
+            var drawData = new Animator.DrawData(
+                Content.Load<Texture2D>("zombie_idle"), 8,
+                Content.Load<Texture2D>("zombie_walk"), 8,
+                Content.Load<Texture2D>("zombie_idle"), 7,
+                Content.Load<Texture2D>("zombie_death"), 5,
+                Content.Load<Texture2D>("zombie_idle"), 8,
+                new Vector2(50, 65),
+                new Vector2(100, 100)
+            );
+
+            var boxSize = new Vector2(32, 70);
             int enemyCount = gameLevel * 10;
             if (_enemySpawnCountDown < 1)
             {
@@ -167,21 +181,22 @@ namespace Survivor
                             {
                                 int XPosition;
                                 int pickSide = random.Next(1, 3);
-                                
+
                                 if (pickSide == 1)
                                     XPosition = random.Next((int)Math.Round(worldBounds.WorldEndingBounds.X * 0.05), (int)Math.Round(worldBounds.WorldEndingBounds.X * 0.2));
                                 else
                                     XPosition = random.Next((int)Math.Round(worldBounds.WorldEndingBounds.X * 0.8), (int)Math.Round(worldBounds.WorldEndingBounds.X * 0.95));
 
                                 int YPosition = random.Next(40, (int)Math.Round(worldBounds.WorldEndingBounds.Y) - 200);
-                                enemies[i] = new Enemy(worldBounds, spriteSheetIdle, spriteSheetRun, spriteSheetAttack, spriteSheetDead, x: XPosition, y: YPosition, 30, 70);
+                                Vector2 position = new(XPosition, YPosition);
+                                enemies[i] = new Enemy(worldBounds, drawData, boxSize, position);
                                 _spawnedEnemies++;
                                 break;
                             }
                 _enemySpawnCountDown = _enemySpawnClock;
             }
             else
-                _enemySpawnCountDown--;          
+                _enemySpawnCountDown--;
         }
 
         public void ResetEnemies()
@@ -190,13 +205,20 @@ namespace Survivor
                 enemies[i] = null;
         }
 
-        public void LoadSound(ref SoundEffectInstance sound, string song, bool repeat, float volume, float pitch)
+        public void ConstructPlayer()
         {
-            ambienceEffect = Content.Load<SoundEffect>(song);
-            sound = ambienceEffect.CreateInstance();
-            sound.IsLooped = repeat;
-            sound.Volume = volume;
-            sound.Pitch = pitch;
+            var drawData = new Animator.DrawData(
+                Content.Load<Texture2D>("IDLE"), 10,
+                Content.Load<Texture2D>("RUN"), 16,
+                Content.Load<Texture2D>("attack"), 7,
+                Content.Load<Texture2D>("IDLE"), 10,
+                Content.Load<Texture2D>("IDLE"), 10,
+                new Vector2(92, 135),
+                new Vector2(180, 200)
+            );
+            var boxSize = new Vector2(28, 67);
+            var playerPosition = new Vector2(600, (int)Math.Round(worldBounds.WorldEndingBounds.Y) - 55);
+            _player = new Player(worldBounds, drawData, playerPosition, boxSize);
         }
 
         protected override void LoadContent()
@@ -204,20 +226,10 @@ namespace Survivor
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             //create a player
             backgroundTexture = Content.Load<Texture2D>("Summer3");
-            spriteSheetIdle = Content.Load<Texture2D>("IDLE");
-            spriteSheetRun = Content.Load<Texture2D>("RUN");
-            spriteSheetAttack = Content.Load<Texture2D>("attack");
-            spriteSheetDead = Content.Load<Texture2D>("IDLE");
             landTexture = Content.Load<Texture2D>("4");
-
             font = Content.Load<SpriteFont>("DebugFont"); // A tiny default font
-            _player = new Player(worldBounds, spriteSheetIdle, spriteSheetRun, spriteSheetAttack, spriteSheetDead, x: 600, y: (int)Math.Round(worldBounds.WorldEndingBounds.Y) - 55, 28, 67);
 
-            //create initial array of enemies
-            spriteSheetIdle = Content.Load<Texture2D>("zombie_idle");
-            spriteSheetRun = Content.Load<Texture2D>("zombie_walk");
-            spriteSheetAttack = Content.Load<Texture2D>("zombie_attack");
-            spriteSheetDead = Content.Load<Texture2D>("zombie_death");
+            ConstructPlayer();
             FillEnemies();
 
             //initiate background music loop
@@ -225,7 +237,7 @@ namespace Survivor
             MediaPlayer.IsRepeating = true;   // loop automatically
             MediaPlayer.Volume = 0.05f;        // 0..1
             MediaPlayer.Play(backgroundSong);
-            
+
             //load player sounds
             LoadSound(ref run, "step", false, 0.2f, -0.2f);
             LoadSound(ref jump, "jump", false, 0.2f, -0.2f);
@@ -294,21 +306,9 @@ namespace Survivor
             gameResetTimer = 500;
             gamePaused = false;
             _spawnedEnemies = 0;
-
-            //reset player
-            _player = null;
-            spriteSheetIdle = Content.Load<Texture2D>("IDLE");
-            spriteSheetRun = Content.Load<Texture2D>("RUN");
-            spriteSheetAttack = Content.Load<Texture2D>("attack");
-            spriteSheetDead = Content.Load<Texture2D>("IDLE");
-            _player = new Player(worldBounds, spriteSheetIdle, spriteSheetRun, spriteSheetAttack, spriteSheetDead, x: 600, y: (int)Math.Round(worldBounds.WorldEndingBounds.Y) - 55, 28, 67);
-
+            ConstructPlayer();
             //reset enemies
             ResetEnemies();
-            spriteSheetIdle = Content.Load<Texture2D>("zombie_idle");
-            spriteSheetRun = Content.Load<Texture2D>("zombie_walk");
-            spriteSheetAttack = Content.Load<Texture2D>("zombie_attack");
-            spriteSheetDead = Content.Load<Texture2D>("zombie_death");
             FillEnemies();
         }
 
@@ -338,19 +338,16 @@ namespace Survivor
                             enemies[i].Velocity.ResetSpeedY();
 
                         //if enemy is dead, add score and remove enemy from array
-                        if (enemies[i].State == EnemyState.Dead)
-                            //remove enemy from array after animation plays out
-                            if (enemies[i].DeathFrames == 0)
-                            {
-                                enemies[i] = null;
-                                _player.AddScore(gameLevel * 10);
-                            }
-                            else
-                                enemies[i].DeathFrames--;
+                        if (enemies[i].State == State.Dead && enemies[i].AnimationFinished())
+                        {
+                            enemies[i] = null;
+                            _player.AddScore(gameLevel * 10);
+                        }
                         else
                             //if enemy alive, move it
                             enemies[i].Update(_player.Position.Coords);
                     }
+                    
                 //check if player took damage
                 CheckDamageTaken();
                 //check if should level up
@@ -405,12 +402,12 @@ namespace Survivor
             if (!gamePaused)
             {
                 HandlePlayerInput(gameTime);
-                if (_player.State == PlayerState.Running)
+                if (_player.State == State.Running)
                     run.Play();
                 else
                     run.Pause();
 
-                if (_player.State == PlayerState.Jumping && _player.Position.Coords.Y > worldBounds.WorldEndingBounds.Y - 51 && _player.Velocity.Speed.Y > 0)
+                if (_player.State == State.Jumping && _player.Position.Coords.Y > worldBounds.WorldEndingBounds.Y - 51 && _player.Velocity.Speed.Y > 0)
                     land.Play();
 
                 _spriteBatch.Begin();

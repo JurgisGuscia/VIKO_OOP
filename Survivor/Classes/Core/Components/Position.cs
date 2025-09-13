@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Survivor.Classes
+namespace Survivor.Classes.Core.Components
 {
     public class Position(float x, float y)
     {
@@ -9,10 +9,7 @@ namespace Survivor.Classes
 
         public Vector2 Coords => _position;
 
-        public void SetCoords(Vector2 coords)
-        {
-            _position = coords;
-        }
+        public void SetCoords(Vector2 coords) => _position = coords;
 
         public void Move(Vector2 movement) => _position += movement;
 

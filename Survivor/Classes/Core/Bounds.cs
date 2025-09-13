@@ -1,7 +1,16 @@
 using System.Numerics;
 using System;
-namespace Survivor.Classes
+using Survivor.Classes.Core.Components;
+namespace Survivor.Classes.Core
 {
+    public enum State
+    {
+        Idle,
+        Running,
+        Jumping,
+        Attacking,
+        Dead
+    }
     public class WorldBounds(float width = 1280, float height = 720)
     {
         private readonly Vector2 _end = new(width, height);
@@ -16,21 +25,11 @@ namespace Survivor.Classes
         {
             Vector2 startPoint = size.StartPoint(position);
             Vector2 endPoint = size.EndPoint(position);
-            if (
-                startPoint.X >= WorldStartingBounds.X &&
-                startPoint.X <= WorldEndingBounds.X &&
-                endPoint.Y >= WorldStartingBounds.Y &&
-                endPoint.Y <= WorldEndingBounds.Y
-            )
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            bool withinX = startPoint.X >= WorldStartingBounds.X && endPoint.X <= WorldEndingBounds.X;
+            bool withinY = startPoint.Y >= WorldStartingBounds.Y && endPoint.Y <= WorldEndingBounds.Y;
+            return withinX && withinY;
         }
-            
+
 
     }
 }
