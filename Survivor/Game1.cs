@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework.Media;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Xna.Framework;
@@ -10,7 +11,8 @@ using Vector2 = System.Numerics.Vector2;
 using Microsoft.Xna.Framework.Audio;
 using Survivor.Classes.Core;
 using CoordVector = System.Numerics.Vector2;
-using Survivor.Classes.Core.Components; 
+using Survivor.Classes.Core.Components;
+using Survivor.Classes.Controllers;
 namespace Survivor
 {
     public class Game1 : Game
@@ -30,7 +32,6 @@ namespace Survivor
         private int _enemySpawnPerCycle = 5;
         private int _enemySpawnCountDown = 0;
         private int _enemySpawnClock = 100;
-
         public int animationTime = 0;
         public bool gamePaused = false;
         public int gameResetTimer = 500;
@@ -65,12 +66,11 @@ namespace Survivor
 
         private void HandlePlayerInput(GameTime gameTime)
         {
-            var keyboardState = Keyboard.GetState();
+            List<InputState> inputs = InputController.GetInput();
             int dx = 0;
             int dy = 0;
-
             //Handle walking actions
-            if (keyboardState.IsKeyDown(Keys.W))
+            if (inputs.Contains(InputState.Jump))
                 if (_player.State != State.Jumping)
                 {
                     jump.Play();
@@ -79,7 +79,7 @@ namespace Survivor
                     _player.Velocity.AddVelocity(new(0, -15f));
                 }
                 
-            if (keyboardState.IsKeyDown(Keys.A))
+            if (inputs.Contains(InputState.MoveLeft))
             {
                 dx -= 5; // Move left
                 if (_player.State != State.Jumping)
@@ -87,7 +87,7 @@ namespace Survivor
                 _player.Direction = "left";
             }
             
-            if (keyboardState.IsKeyDown(Keys.D))
+            if (inputs.Contains(InputState.MoveRight))
             {
                 dx += 5; // Move right
                 if (_player.State != State.Jumping)
@@ -102,7 +102,7 @@ namespace Survivor
                 _player.SetState(State.Attacking);
             }
             //handle attack input
-            else if (keyboardState.IsKeyDown(Keys.J))
+            else if (inputs.Contains(InputState.Attack))
             {
                 if (animationTime == 0)
                 {
