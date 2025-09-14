@@ -1,8 +1,8 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System;
-using CoordVector = System.Numerics.Vector2;
-using Survivor.Classes.Core.Components;
+using State = Survivor.Classes.Core.Enums.State;
+using Survivor.Classes.Core.Interfaces;
+
 namespace Survivor.Classes.Core
 {
     public class Enemy : GameObject
@@ -10,7 +10,7 @@ namespace Survivor.Classes.Core
         private int _health;
 
         private readonly Animator _Animator;
-        
+        private readonly IWorldBounds _worldBounds;
         public string Direction { get; set; } = "right";
         public int TotalFrames { get; set; } = 10;
         public State State { get; set; } = State.Running;
@@ -20,9 +20,10 @@ namespace Survivor.Classes.Core
         public bool AnimationFinished() => _Animator.AnimationFinished();
         public void StartDeathAnimation() => _Animator.StartDeathAnimation();
         
-       public Enemy(WorldBounds bounds, Animator.DrawData drawData, Vector2 boxSize, Vector2 position)
-            : base(bounds, (int)position.X, (int)position.Y, (int)boxSize.X, (int)boxSize.Y)
+       public Enemy(IWorldBounds worldBounds, Animator.DrawData drawData, Vector2 boxSize, Vector2 position)
+            : base((int)position.X, (int)position.Y, (int)boxSize.X, (int)boxSize.Y)
         {
+            _worldBounds = worldBounds;
              _Animator = new Animator(drawData, State.Idle);
             _health = 100;
         }
@@ -33,36 +34,9 @@ namespace Survivor.Classes.Core
             _Animator.SetState(state);
         } 
 
-        public void HandleOutOfBounds()
+        public Vector2 GetVelocity(Vector2 playerPosition)
         {
-            int XCoord = (int)Math.Round(Position.Coords.X);
-            int YCoord = (int)Math.Round(Position.Coords.Y);
-
-            if (XCoord < WorldBounds.WorldStartingBounds.X)
-                XCoord = (int)Math.Round(WorldBounds.WorldStartingBounds.X);
-
-            if (YCoord < WorldBounds.WorldStartingBounds.Y)
-                YCoord = (int)Math.Round(WorldBounds.WorldStartingBounds.Y);
-
-            if (XCoord > WorldBounds.WorldEndingBounds.X)
-                XCoord = (int)Math.Round(WorldBounds.WorldEndingBounds.X);
-
-            if (YCoord > WorldBounds.WorldEndingBounds.Y - 50)
-            {
-                if (State != State.Dead)
-                {
-                    SetState(State.Idle);
-                    YCoord = (int)Math.Round(WorldBounds.WorldEndingBounds.Y - 50);
-                }
-            }
-
-            CoordVector Coordinates = new(XCoord, YCoord);
-            Position.SetCoords(Coordinates);
-        }
-
-        public CoordVector GetVelocity(CoordVector playerPosition)
-        {
-            if (playerPosition.X < Position.Coords.X)
+            if (playerPosition.X < Position.Position.X)
             {
                 Direction = "left";
                 return new(-0.1f, 0);
@@ -75,27 +49,28 @@ namespace Survivor.Classes.Core
         }
 
         public override void Draw(SpriteBatch spriteBatch, GameTime gameTime)=>
-            _Animator.Draw(spriteBatch, Position.Coords, Direction, gameTime);
+            _Animator.Draw(spriteBatch, Position.Position, Direction, gameTime);
 
-        public override void Update(CoordVector playerPosition)
+        public override void Update(Vector2 playerPosition)
         {
             if (State != State.Dead)
             {
-                Velocity.AddVelocity(GetVelocity(playerPosition));
-                Velocity.ApplyVelocity();
-                Position.Move(Velocity.Speed);
-                Velocity.ResetVelocity();
+                Velocity.ApplyForce(GetVelocity(playerPosition));
+                Velocity.AddVelocity();
+                Position.Move(Velocity.Velocity);
+                Velocity.ResetAcceleration();
+                
+                if (Velocity.Velocity.X > 2)
+                    Velocity.SetVelocityX(2f);
 
-                if (Velocity.Speed.X > 2)
-                    Velocity.SetSpeedX(2f);
+                if (Velocity.Velocity.X < -2)
+                    Velocity.SetVelocityX(-2f);
 
-                if (Velocity.Speed.X < -2)
-                    Velocity.SetSpeedX(-2f);
-
-                if (Velocity.Speed.Y == 0 && Velocity.Velocity.Y == 0 && Position.Coords.Y == WorldBounds.WorldEndingBounds.Y - 50)
+                if (Position.Position.Y >= _worldBounds.WorldEnd.Y - Size.Size.Y / 2)
                     SetState(State.Running);
                 else
-                    SetState(State.Jumping);
+                    SetState(State.Idle);
+             
             }
         }
     }

@@ -1,31 +1,31 @@
 ﻿using System;
-using System.Numerics;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Media;
-using System.Security.Cryptography.X509Certificates;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using PlayerVector = System.Numerics.Vector2;
-using Vector2 = System.Numerics.Vector2;
 using Microsoft.Xna.Framework.Audio;
 using Survivor.Classes.Core;
-using CoordVector = System.Numerics.Vector2;
-using Survivor.Classes.Core.Components;
+using State = Survivor.Classes.Core.Enums.State;
+using Survivor.Classes.Core.Interfaces;
 using Survivor.Classes.Controllers;
 namespace Survivor
 {
+    
     public class Game1 : Game
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private float attackTimer = 0f;
         private Texture2D _pixel;
-        private int gameLevel = 1;
-        private int invulnerabilityTimer = 24;
-        private int invulnerabilityTimeLeft = 0;
+        private int _gameLevel = 1;
+        private int _invulnerabilityTimer = 24;
+        private int _invulnerabilityTimeLeft = 0;
         private SpriteFont font;
-        private WorldBounds worldBounds;
+
+        private IWorldBounds _worldBounds;
+        private WorldBoundsController _worldBoundsController;
+
         private Player _player;
         private static int _enemyCount = 100;
         private int _spawnedEnemies = 0;
@@ -48,7 +48,7 @@ namespace Survivor
         SoundEffectInstance land;
         SoundEffectInstance swing;
         SoundEffect ambienceEffect;
-        
+
         Random random = new Random();
 
         public Game1()
@@ -56,10 +56,10 @@ namespace Survivor
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-
-            worldBounds = new WorldBounds();
-            _graphics.PreferredBackBufferWidth = worldBounds.WorldWidth;
-            _graphics.PreferredBackBufferHeight = worldBounds.WorldHeight;
+            _worldBounds = new WorldBounds();
+            _worldBoundsController = new WorldBoundsController(_worldBounds);
+            _graphics.PreferredBackBufferWidth = (int)_worldBounds.WorldEnd.X;
+            _graphics.PreferredBackBufferHeight = (int)_worldBounds.WorldEnd.Y;
             _graphics.ApplyChanges();
 
         }
@@ -75,10 +75,10 @@ namespace Survivor
                 {
                     jump.Play();
                     _player.SetState(State.Jumping);
-                    _player.Velocity.ResetSpeed();
-                    _player.Velocity.AddVelocity(new(0, -15f));
+                    _player.Velocity.ResetVelocity();
+                    _player.Velocity.ApplyForce(new(0, -15f));
                 }
-                
+
             if (inputs.Contains(InputState.MoveLeft))
             {
                 dx -= 5; // Move left
@@ -86,7 +86,7 @@ namespace Survivor
                     _player.SetState(State.Running);
                 _player.Direction = "left";
             }
-            
+
             if (inputs.Contains(InputState.MoveRight))
             {
                 dx += 5; // Move right
@@ -113,43 +113,43 @@ namespace Survivor
 
                     if (_player.Direction == "right")
                     {
-                        damageZoneStart = new(_player.Position.Coords.X, _player.Position.Coords.Y - 50);
-                        damageZoneEnd = new(_player.Position.Coords.X + 90, _player.Position.Coords.Y + 50);
+                        damageZoneStart = new(_player.Position.Position.X, _player.Position.Position.Y - _player.Size.Size.Y / 2);
+                        damageZoneEnd = new(_player.Position.Position.X + 100, _player.Position.Position.Y + _player.Size.Size.Y / 2);
                     }
                     else
                     {
-                        damageZoneStart = new(_player.Position.Coords.X - 90, _player.Position.Coords.Y - 100);
-                        damageZoneEnd = new(_player.Position.Coords.X, _player.Position.Coords.Y + 100);
+                        damageZoneStart = new(_player.Position.Position.X - 100, _player.Position.Position.Y - _player.Size.Size.Y / 2);
+                        damageZoneEnd = new(_player.Position.Position.X, _player.Position.Position.Y + _player.Size.Size.Y /2);
                     }
 
                     for (int i = 0; i < _enemyCount; i++)
                     {
                         if (enemies[i] != null)
                         {
-                            if (enemies[i].Position.Coords.X > damageZoneStart.X && enemies[i].Position.Coords.X < damageZoneEnd.X &&
-                                    enemies[i].Position.Coords.Y > damageZoneStart.Y && enemies[i].Position.Coords.Y < damageZoneEnd.Y)
-                                enemies[i].SetState(State.Dead); 
+                            if (enemies[i].Position.Position.X > damageZoneStart.X && enemies[i].Position.Position.X < damageZoneEnd.X &&
+                                    enemies[i].Position.Position.Y > damageZoneStart.Y && enemies[i].Position.Position.Y < damageZoneEnd.Y)
+                                enemies[i].SetState(State.Dead);
                         }
                     }
                 }
             }
             //move player
             _player.Walk(dx, dy);
-            _player.HandleOutOfBounds();
+            _player.Position.SetPosition(_worldBoundsController.PushToWorldBounds(_player.Position.Position, _player.Size.Size));
         }
 
-        private void ConstructGround(int startingX) =>  _spriteBatch.Draw(landTexture,destinationRectangle: new Rectangle(startingX, 290, 500, 500), color: Color.White);
-            
+        private void ConstructGround(int startingX) => _spriteBatch.Draw(landTexture, destinationRectangle: new Rectangle(startingX, 290, 500, 500), color: Color.White);
+
         private void DrawGround()
         {
             ConstructGround(0);
             ConstructGround(500);
             ConstructGround(1000);
-        }    
+        }
 
         protected override void Initialize() => base.Initialize();
 
-         public void LoadSound(ref SoundEffectInstance sound, string song, bool repeat, float volume, float pitch)
+        public void LoadSound(ref SoundEffectInstance sound, string song, bool repeat, float volume, float pitch)
         {
             ambienceEffect = Content.Load<SoundEffect>(song);
             sound = ambienceEffect.CreateInstance();
@@ -157,7 +157,7 @@ namespace Survivor
             sound.Volume = volume;
             sound.Pitch = pitch;
         }
-    
+
         public void FillEnemies()
         {
             var drawData = new Animator.DrawData(
@@ -171,7 +171,7 @@ namespace Survivor
             );
 
             var boxSize = new Vector2(32, 70);
-            int enemyCount = gameLevel * 10;
+            int enemyCount = _gameLevel * 10;
             if (_enemySpawnCountDown < 1)
             {
                 for (int j = 0; j < _enemySpawnPerCycle; j++)
@@ -183,13 +183,13 @@ namespace Survivor
                                 int pickSide = random.Next(1, 3);
 
                                 if (pickSide == 1)
-                                    XPosition = random.Next((int)Math.Round(worldBounds.WorldEndingBounds.X * 0.05), (int)Math.Round(worldBounds.WorldEndingBounds.X * 0.2));
+                                    XPosition = random.Next((int)Math.Round(_worldBounds.WorldEnd.X * 0.05), (int)Math.Round(_worldBounds.WorldEnd.X * 0.2));
                                 else
-                                    XPosition = random.Next((int)Math.Round(worldBounds.WorldEndingBounds.X * 0.8), (int)Math.Round(worldBounds.WorldEndingBounds.X * 0.95));
+                                    XPosition = random.Next((int)Math.Round(_worldBounds.WorldEnd.X * 0.8), (int)Math.Round(_worldBounds.WorldEnd.X * 0.95));
 
-                                int YPosition = random.Next(40, (int)Math.Round(worldBounds.WorldEndingBounds.Y) - 200);
+                                int YPosition = random.Next(40, (int)Math.Round(_worldBounds.WorldEnd.Y) - 200);
                                 Vector2 position = new(XPosition, YPosition);
-                                enemies[i] = new Enemy(worldBounds, drawData, boxSize, position);
+                                enemies[i] = new Enemy(_worldBounds, drawData, boxSize, position);
                                 _spawnedEnemies++;
                                 break;
                             }
@@ -217,8 +217,8 @@ namespace Survivor
                 new Vector2(180, 200)
             );
             var boxSize = new Vector2(28, 67);
-            var playerPosition = new Vector2(600, (int)Math.Round(worldBounds.WorldEndingBounds.Y) - 55);
-            _player = new Player(worldBounds, drawData, playerPosition, boxSize);
+            var playerPosition = new Vector2(600, (int)Math.Round(_worldBounds.WorldEnd.Y) - 600);
+            _player = new Player(_worldBounds, drawData, playerPosition, boxSize);
         }
 
         protected override void LoadContent()
@@ -251,7 +251,8 @@ namespace Survivor
 
         public bool CheckLevelUp()
         {
-            if (_spawnedEnemies >= gameLevel * 10){
+            if (_spawnedEnemies >= _gameLevel * 10)
+            {
                 for (int i = 0; i < _enemyCount; i++)
                     if (enemies[i] != null)
                         return false;
@@ -274,26 +275,30 @@ namespace Survivor
         public void CheckDamageTaken()
         {
             int damageTaken = 0;
-            if (invulnerabilityTimeLeft < 1)
+            if (_invulnerabilityTimeLeft < 1)
             {
-                Vector2 playerTopLeft = new(_player.Position.Coords.X - _player.Size.ObjectSize.X, _player.Position.Coords.Y - _player.Size.ObjectSize.Y / 2);
-                Vector2 playerTopRight = new(_player.Position.Coords.X + _player.Size.ObjectSize.X, _player.Position.Coords.Y - _player.Size.ObjectSize.Y / 2);
-                Vector2 playerBottomLeft = new(_player.Position.Coords.X - _player.Size.ObjectSize.X, _player.Position.Coords.Y + _player.Size.ObjectSize.Y / 2);
-                Vector2 PlayerBottomRight = new(_player.Position.Coords.X + _player.Size.ObjectSize.X, _player.Position.Coords.Y + _player.Size.ObjectSize.Y / 2);
+                int XOffset = (int)_player.Size.Size.X / 2;
+                int YOffset = (int)_player.Size.Size.Y / 2;
+                Vector2 playerTopLeft = new(_player.Position.Position.X - XOffset, _player.Position.Position.Y - YOffset);
+                Vector2 playerTopRight = new(_player.Position.Position.X + XOffset, _player.Position.Position.Y - YOffset);
+                Vector2 playerBottomLeft = new(_player.Position.Position.X - XOffset, _player.Position.Position.Y + YOffset);
+                Vector2 PlayerBottomRight = new(_player.Position.Position.X + XOffset, _player.Position.Position.Y + YOffset);
                 Vector2[] playerBodyCorners = [playerTopLeft, playerTopRight, playerBottomLeft, PlayerBottomRight];
 
                 for (int i = 0; i < _enemyCount; i++)
                     if (enemies[i] != null)
                     {
-                        Vector2 enemyBodyStart = new(enemies[i].Position.Coords.X - enemies[i].Size.ObjectSize.X / 2, enemies[i].Position.Coords.Y - enemies[i].Size.ObjectSize.Y / 2);
-                        Vector2 enemyBodyEnd = new(enemies[i].Position.Coords.X + enemies[i].Size.ObjectSize.X / 2, enemies[i].Position.Coords.Y + enemies[i].Size.ObjectSize.Y / 2);
+                        XOffset = (int)enemies[i].Size.Size.X / 2;
+                        YOffset = (int)enemies[i].Size.Size.Y / 2;
+                        Vector2 enemyBodyStart = new(enemies[i].Position.Position.X - XOffset, enemies[i].Position.Position.Y - YOffset);
+                        Vector2 enemyBodyEnd = new(enemies[i].Position.Position.X + XOffset, enemies[i].Position.Position.Y + YOffset);
 
                         if (CheckCollision(playerBodyCorners, enemyBodyStart, enemyBodyEnd))
                             damageTaken++;
                     }
                 //if damage taken, give player temporal invulnerability
                 if (damageTaken > 0)
-                    invulnerabilityTimeLeft = invulnerabilityTimer;
+                    _invulnerabilityTimeLeft = _invulnerabilityTimer;
 
                 _player.TakeDamage(damageTaken);
             }
@@ -302,7 +307,7 @@ namespace Survivor
         public void resetGame()
         {
             //reset game world
-            gameLevel = 1;
+            _gameLevel = 1;
             gameResetTimer = 500;
             gamePaused = false;
             _spawnedEnemies = 0;
@@ -316,44 +321,50 @@ namespace Survivor
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
-            
+
             //if game is paused, don't run update
             if (!gamePaused)
             {
                 //if player is off ground, apply gravity
-                if (_player.Position.Coords.Y < worldBounds.WorldEndingBounds.Y - 51)
-                    _player.Velocity.AddVelocity(new(0, 0.5f));
+                if (_player.Position.Position.Y <= _worldBounds.WorldEnd.Y - _player.Size.Size.Y / 2 - 20)
+                    _player.Velocity.ApplyForce(new(0, 0.5f));
                 else
-                    _player.Velocity.ResetSpeedY();
-
-                _player.Update(_player.Position.Coords);
+                    if(_player.Velocity.Velocity.Y > 0)
+                        _player.Velocity.ResetAccelerationY();
+                
+                    
+                _player.Update(_player.Position.Position);
+                _player.Position.SetPosition(_worldBoundsController.PushToWorldBounds(_player.Position.Position, _player.Size.Size));
 
                 for (int i = 0; i < _enemyCount; i++)
                     if (enemies[i] != null)
                     {
                         //if enemy is off ground, apply gravity
-                        if (enemies[i].Position.Coords.Y < worldBounds.WorldEndingBounds.Y - 51)
-                            enemies[i].Velocity.AddVelocity(new(0, 0.5f));
+                        if (enemies[i].Position.Position.Y < _worldBounds.WorldEnd.Y - enemies[i].Size.Size.Y / 2)
+                            enemies[i].Velocity.ApplyForce(new(0, 0.5f));
                         else
-                            enemies[i].Velocity.ResetSpeedY();
+                            enemies[i].Velocity.ResetAccelerationY();
 
                         //if enemy is dead, add score and remove enemy from array
                         if (enemies[i].State == State.Dead && enemies[i].AnimationFinished())
                         {
                             enemies[i] = null;
-                            _player.AddScore(gameLevel * 10);
+                            _player.AddScore(_gameLevel * 10);
                         }
                         else
+                        {
                             //if enemy alive, move it
-                            enemies[i].Update(_player.Position.Coords);
+                            enemies[i].Update(_player.Position.Position);
+                            enemies[i].Position.SetPosition(_worldBoundsController.PushToWorldBounds(enemies[i].Position.Position, enemies[i].Size.Size));
+                        }
                     }
-                    
+
                 //check if player took damage
                 CheckDamageTaken();
                 //check if should level up
                 if (CheckLevelUp())
                 {
-                    gameLevel++;
+                    _gameLevel++;
                     _spawnedEnemies = 0;
                 }
                 else
@@ -361,7 +372,7 @@ namespace Survivor
                 if (_player.Health < 1)
                     gamePaused = true;
                 //reduce invulnerability timer
-                invulnerabilityTimeLeft--;
+                _invulnerabilityTimeLeft--;
             }
             else
             {
@@ -378,9 +389,9 @@ namespace Survivor
         public void DrawGameInfo()
         {
             //draw debug info
-            _spriteBatch.DrawString(font, "Coordinates " + _player.Position.Coords.X + " " + _player.Position.Coords.Y, new Vector2(10, 300), Color.White);
-            _spriteBatch.DrawString(font, "Speed X " + (int)Math.Round(_player.Velocity.Speed.X), new Vector2(10, 330), Color.White);
-            _spriteBatch.DrawString(font, "Speed Y " + (int)Math.Round(_player.Velocity.Speed.Y), new Vector2(10, 350), Color.White);
+            _spriteBatch.DrawString(font, "Coordinates " + _player.Position.Position.X + " " + _player.Position.Position.Y, new Vector2(10, 300), Color.White);
+            _spriteBatch.DrawString(font, "Acceleration X " + (int)Math.Round(_player.Velocity.Acceleration.X), new Vector2(10, 330), Color.White);
+            _spriteBatch.DrawString(font, "Acceleration Y " + (int)Math.Round(_player.Velocity.Acceleration.Y), new Vector2(10, 350), Color.White);
             _spriteBatch.DrawString(font, "Velocity X " + (int)Math.Round(_player.Velocity.Velocity.X), new Vector2(10, 370), Color.White);
             _spriteBatch.DrawString(font, "Velocity Y " + (int)Math.Round(_player.Velocity.Velocity.Y), new Vector2(10, 390), Color.White);
             _spriteBatch.DrawString(font, "State " + _player.State, new Vector2(10, 410), Color.White);
@@ -392,7 +403,7 @@ namespace Survivor
             _spriteBatch.Draw(_pixel, new Rectangle(400, 50, _player.Health * 5, 20), Color.Red);
             _spriteBatch.DrawString(font, "HP:" + _player.Health, new Vector2(410, 52), Color.White);
             //draw level and score
-            _spriteBatch.DrawString(font, "Level: " + gameLevel, new Vector2(10, 10), Color.White);
+            _spriteBatch.DrawString(font, "Level: " + _gameLevel, new Vector2(10, 10), Color.White);
             _spriteBatch.DrawString(font, "Score: " + _player.Score, new Vector2(10, 30), Color.White);
         }
 
@@ -407,7 +418,7 @@ namespace Survivor
                 else
                     run.Pause();
 
-                if (_player.State == State.Jumping && _player.Position.Coords.Y > worldBounds.WorldEndingBounds.Y - 51 && _player.Velocity.Speed.Y > 0)
+                if (_player.State == State.Jumping && _player.Position.Position.Y > _worldBounds.WorldEnd.Y - 51 && _player.Velocity.Acceleration.Y > 0)
                     land.Play();
 
                 _spriteBatch.Begin();
@@ -425,10 +436,10 @@ namespace Survivor
                 foreach (Enemy enemy in enemies)
                     if (enemy != null)
                     {
-                        enemy.HandleOutOfBounds();
+                        _worldBoundsController.PushToWorldBounds(enemy.Position.Position, enemy.Size.Size);
                         enemy.Draw(_spriteBatch, gameTime);
                     }
-                
+
                 _spriteBatch.End();
                 if (animationTime > 0)
                     animationTime--;
@@ -447,11 +458,11 @@ namespace Survivor
 
                 _spriteBatch.DrawString(font, "You lost", new Vector2(600, 300), Color.Red);
                 _spriteBatch.DrawString(font, "Score: " + _player.Score, new Vector2(600, 320), Color.Red);
-                _spriteBatch.DrawString(font, "Level reached: " + gameLevel, new Vector2(600, 340), Color.Red);
+                _spriteBatch.DrawString(font, "Level reached: " + _gameLevel, new Vector2(600, 340), Color.Red);
                 _spriteBatch.DrawString(font, "Game will restart in : " + (gameResetTimer / 100), new Vector2(600, 360), Color.Red);
 
                 _spriteBatch.End();
-                
+
             }
             base.Draw(gameTime);
 

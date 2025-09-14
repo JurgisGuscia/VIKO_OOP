@@ -1,18 +1,18 @@
-using System.Numerics;
-using System;
-
+using Survivor.Classes.Core.Utils;
 namespace Survivor.Classes.Core.Components
 {
-    public class Size(int x, int y)
+    public class ObjectSize
     {
-        private Vector2 _objectSize = new(x, y);
+        private Vector2 _size;
 
-        public Vector2 ObjectSize => _objectSize;
-        
+        public ObjectSize(int x, int y) => _size = new Vector2(x, y);
+
+        public Vector2 Size => _size;
+
         public Vector2 StartPoint(Vector2 position) =>
-            new((int)Math.Round(position.X) - _objectSize.X / 2, (int)Math.Round(position.Y) - _objectSize.Y / 2);
+            new(Util.ToInt(position.X) - _size.X / 2, Util.ToInt(position.Y) - _size.Y / 2);
 
         public Vector2 EndPoint(Vector2 position) =>
-            new((int)Math.Round(position.X) + _objectSize.X / 2, (int)Math.Round(position.Y) + _objectSize.Y / 2);
+            new(Util.ToInt(position.X) + _size.X / 2, Util.ToInt(position.Y) + _size.Y / 2);
     }
 }

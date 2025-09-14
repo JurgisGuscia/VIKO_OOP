@@ -1,11 +1,8 @@
 namespace Survivor.Classes.Core;
-
 using System;
-using System.Numerics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using CoordVector = System.Numerics.Vector2;
-using Vector2 = System.Numerics.Vector2;
+using State = Survivor.Classes.Core.Enums.State;
 public class Animator
 {
     public record DrawData(
