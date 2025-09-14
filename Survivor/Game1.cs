@@ -21,8 +21,8 @@ namespace Survivor
         private int _gameLevel = 1;
         private int _invulnerabilityTimer = 24;
         private int _invulnerabilityTimeLeft = 0;
-        private SpriteFont font;
-
+        private SpriteFont _font;
+        private UI _ui;
         private IWorldBounds _worldBounds;
         private WorldBoundsController _worldBoundsController;
 
@@ -58,6 +58,7 @@ namespace Survivor
             IsMouseVisible = true;
             _worldBounds = new WorldBounds();
             _worldBoundsController = new WorldBoundsController(_worldBounds);
+            
             _graphics.PreferredBackBufferWidth = (int)_worldBounds.WorldEnd.X;
             _graphics.PreferredBackBufferHeight = (int)_worldBounds.WorldEnd.Y;
             _graphics.ApplyChanges();
@@ -138,15 +139,6 @@ namespace Survivor
             _player.Position.SetPosition(_worldBoundsController.PushToWorldBounds(_player.Position.Position, _player.Size.Size));
         }
 
-        private void ConstructGround(int startingX) => _spriteBatch.Draw(landTexture, destinationRectangle: new Rectangle(startingX, 290, 500, 500), color: Color.White);
-
-        private void DrawGround()
-        {
-            ConstructGround(0);
-            ConstructGround(500);
-            ConstructGround(1000);
-        }
-
         protected override void Initialize() => base.Initialize();
 
         public void LoadSound(ref SoundEffectInstance sound, string song, bool repeat, float volume, float pitch)
@@ -224,14 +216,15 @@ namespace Survivor
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
+            
             //create a player
             backgroundTexture = Content.Load<Texture2D>("Summer3");
             landTexture = Content.Load<Texture2D>("4");
-            font = Content.Load<SpriteFont>("DebugFont"); // A tiny default font
+            _font = Content.Load<SpriteFont>("DebugFont"); // A tiny default font
 
             ConstructPlayer();
             FillEnemies();
-
+            _ui = new UI(_spriteBatch);
             //initiate background music loop
             backgroundSong = Content.Load<Song>("Mission");
             MediaPlayer.IsRepeating = true;   // loop automatically
@@ -304,15 +297,15 @@ namespace Survivor
             }
         }
 
-        public void resetGame()
+        public void ResetGame()
         {
             //reset game world
             _gameLevel = 1;
             gameResetTimer = 500;
             gamePaused = false;
             _spawnedEnemies = 0;
+            _player = null;
             ConstructPlayer();
-            //reset enemies
             ResetEnemies();
             FillEnemies();
         }
@@ -377,34 +370,13 @@ namespace Survivor
             else
             {
                 if (gameResetTimer < 1)
-                    resetGame();
+                    ResetGame();
                 else
                     gameResetTimer--;
 
             }
             base.Update(gameTime);
 
-        }
-
-        public void DrawGameInfo()
-        {
-            //draw debug info
-            _spriteBatch.DrawString(font, "Coordinates " + _player.Position.Position.X + " " + _player.Position.Position.Y, new Vector2(10, 300), Color.White);
-            _spriteBatch.DrawString(font, "Acceleration X " + (int)Math.Round(_player.Velocity.Acceleration.X), new Vector2(10, 330), Color.White);
-            _spriteBatch.DrawString(font, "Acceleration Y " + (int)Math.Round(_player.Velocity.Acceleration.Y), new Vector2(10, 350), Color.White);
-            _spriteBatch.DrawString(font, "Velocity X " + (int)Math.Round(_player.Velocity.Velocity.X), new Vector2(10, 370), Color.White);
-            _spriteBatch.DrawString(font, "Velocity Y " + (int)Math.Round(_player.Velocity.Velocity.Y), new Vector2(10, 390), Color.White);
-            _spriteBatch.DrawString(font, "State " + _player.State, new Vector2(10, 410), Color.White);
-            _spriteBatch.DrawString(font, "HitBox start X" + (int)Math.Round(damageZoneStart.X), new Vector2(10, 430), Color.White);
-            _spriteBatch.DrawString(font, "HitBox start Y" + (int)Math.Round(damageZoneStart.Y), new Vector2(10, 450), Color.White);
-            _spriteBatch.DrawString(font, "HitBox end X" + (int)Math.Round(damageZoneEnd.X), new Vector2(10, 470), Color.White);
-            _spriteBatch.DrawString(font, "HitBox end Y" + (int)Math.Round(damageZoneEnd.Y), new Vector2(10, 490), Color.White);
-            //draw health
-            _spriteBatch.Draw(_pixel, new Rectangle(400, 50, _player.Health * 5, 20), Color.Red);
-            _spriteBatch.DrawString(font, "HP:" + _player.Health, new Vector2(410, 52), Color.White);
-            //draw level and score
-            _spriteBatch.DrawString(font, "Level: " + _gameLevel, new Vector2(10, 10), Color.White);
-            _spriteBatch.DrawString(font, "Score: " + _player.Score, new Vector2(10, 30), Color.White);
         }
 
         protected override void Draw(GameTime gameTime)
@@ -423,13 +395,9 @@ namespace Survivor
 
                 _spriteBatch.Begin();
 
-                _spriteBatch.Draw(
-                    backgroundTexture,
-                    destinationRectangle: new Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height),
-                    color: Color.White
-                );
-                DrawGround();
-                DrawGameInfo();
+                _ui.DrawWorld(backgroundTexture, GraphicsDevice);
+                _ui.DrawGround(landTexture);
+                _ui.DrawGameInfo(_font, _pixel, _gameLevel, _player);
 
                 _player.Draw(_spriteBatch, gameTime);
 
@@ -446,21 +414,11 @@ namespace Survivor
             }
             else
             {
-                run.Pause();
                 _spriteBatch.Begin();
-                _spriteBatch.Draw(
-                    backgroundTexture,
-                    destinationRectangle: new Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height),
-                    color: Color.White
-                );
-                DrawGround();
-                DrawGameInfo();
-
-                _spriteBatch.DrawString(font, "You lost", new Vector2(600, 300), Color.Red);
-                _spriteBatch.DrawString(font, "Score: " + _player.Score, new Vector2(600, 320), Color.Red);
-                _spriteBatch.DrawString(font, "Level reached: " + _gameLevel, new Vector2(600, 340), Color.Red);
-                _spriteBatch.DrawString(font, "Game will restart in : " + (gameResetTimer / 100), new Vector2(600, 360), Color.Red);
-
+                _ui.DrawWorld(backgroundTexture, GraphicsDevice);
+                _ui.DrawGround(landTexture);
+                _ui.DrawGameInfo(_font, _pixel, _gameLevel, _player);
+                _ui.DrawGameOverScreen(_font, _gameLevel, gameResetTimer, _player);
                 _spriteBatch.End();
 
             }
