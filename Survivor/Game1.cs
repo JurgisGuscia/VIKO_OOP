@@ -9,6 +9,7 @@ using Survivor.Classes.Core;
 using State = Survivor.Classes.Core.Enums.State;
 using Survivor.Classes.Core.Interfaces;
 using Survivor.Classes.Controllers;
+using System.Reflection.Emit;
 namespace Survivor
 {
     
@@ -25,17 +26,14 @@ namespace Survivor
         private UI _ui;
         private IWorldBounds _worldBounds;
         private WorldBoundsController _worldBoundsController;
+        private EnemyController _enemyController;
 
         private Player _player;
-        private static int _enemyCount = 100;
-        private int _spawnedEnemies = 0;
-        private int _enemySpawnPerCycle = 5;
         private int _enemySpawnCountDown = 0;
         private int _enemySpawnClock = 100;
         public int animationTime = 0;
         public bool gamePaused = false;
         public int gameResetTimer = 500;
-        public Enemy[] enemies = new Enemy[_enemyCount];
         public Vector2 damageZoneStart;
         public Vector2 damageZoneEnd;
 
@@ -49,8 +47,6 @@ namespace Survivor
         SoundEffectInstance swing;
         SoundEffect ambienceEffect;
 
-        Random random = new Random();
-
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -58,7 +54,9 @@ namespace Survivor
             IsMouseVisible = true;
             _worldBounds = new WorldBounds();
             _worldBoundsController = new WorldBoundsController(_worldBounds);
-            
+            int maxEnemyCount = 100;
+            int enemySpawnsPerCycle = 5;
+            _enemyController = new EnemyController(maxEnemyCount, _worldBounds, enemySpawnsPerCycle);
             _graphics.PreferredBackBufferWidth = (int)_worldBounds.WorldEnd.X;
             _graphics.PreferredBackBufferHeight = (int)_worldBounds.WorldEnd.Y;
             _graphics.ApplyChanges();
@@ -114,24 +112,17 @@ namespace Survivor
 
                     if (_player.Direction == "right")
                     {
-                        damageZoneStart = new(_player.Position.Position.X, _player.Position.Position.Y - _player.Size.Size.Y / 2);
-                        damageZoneEnd = new(_player.Position.Position.X + 100, _player.Position.Position.Y + _player.Size.Size.Y / 2);
+                        damageZoneStart = new(_player.Position.Position.X, _player.Position.Position.Y - _player.Size.Size.Y / 2 - 30);
+                        damageZoneEnd = new(_player.Position.Position.X + 100, _player.Position.Position.Y + _player.Size.Size.Y / 2 +30);
                     }
                     else
                     {
-                        damageZoneStart = new(_player.Position.Position.X - 100, _player.Position.Position.Y - _player.Size.Size.Y / 2);
-                        damageZoneEnd = new(_player.Position.Position.X, _player.Position.Position.Y + _player.Size.Size.Y /2);
+                        damageZoneStart = new(_player.Position.Position.X - 100, _player.Position.Position.Y - _player.Size.Size.Y / 2 + 30);
+                        damageZoneEnd = new(_player.Position.Position.X, _player.Position.Position.Y + _player.Size.Size.Y / 2+ 30);
                     }
 
-                    for (int i = 0; i < _enemyCount; i++)
-                    {
-                        if (enemies[i] != null)
-                        {
-                            if (enemies[i].Position.Position.X > damageZoneStart.X && enemies[i].Position.Position.X < damageZoneEnd.X &&
-                                    enemies[i].Position.Position.Y > damageZoneStart.Y && enemies[i].Position.Position.Y < damageZoneEnd.Y)
-                                enemies[i].SetState(State.Dead);
-                        }
-                    }
+                    _enemyController.KillEnemies(damageZoneStart, damageZoneEnd);
+
                 }
             }
             //move player
@@ -152,7 +143,7 @@ namespace Survivor
 
         public void FillEnemies()
         {
-            var drawData = new Animator.DrawData(
+            var enemyDrawData = new Animator.DrawData(
                 Content.Load<Texture2D>("zombie_idle"), 8,
                 Content.Load<Texture2D>("zombie_walk"), 8,
                 Content.Load<Texture2D>("zombie_idle"), 7,
@@ -161,40 +152,15 @@ namespace Survivor
                 new Vector2(50, 65),
                 new Vector2(100, 100)
             );
-
-            var boxSize = new Vector2(32, 70);
-            int enemyCount = _gameLevel * 10;
+            int enemyLimitThisLevel = _gameLevel * 10;
+            Vector2 enemyBoxSize = new(32, 70);
             if (_enemySpawnCountDown < 1)
             {
-                for (int j = 0; j < _enemySpawnPerCycle; j++)
-                    if (_spawnedEnemies < enemyCount)
-                        for (int i = 0; i < _enemyCount; i++)
-                            if (enemies[i] == null)
-                            {
-                                int XPosition;
-                                int pickSide = random.Next(1, 3);
-
-                                if (pickSide == 1)
-                                    XPosition = random.Next((int)Math.Round(_worldBounds.WorldEnd.X * 0.05), (int)Math.Round(_worldBounds.WorldEnd.X * 0.2));
-                                else
-                                    XPosition = random.Next((int)Math.Round(_worldBounds.WorldEnd.X * 0.8), (int)Math.Round(_worldBounds.WorldEnd.X * 0.95));
-
-                                int YPosition = random.Next(40, (int)Math.Round(_worldBounds.WorldEnd.Y) - 200);
-                                Vector2 position = new(XPosition, YPosition);
-                                enemies[i] = new Enemy(_worldBounds, drawData, boxSize, position);
-                                _spawnedEnemies++;
-                                break;
-                            }
+                _enemyController.FillEnemies(enemyLimitThisLevel, enemyDrawData, enemyBoxSize);
                 _enemySpawnCountDown = _enemySpawnClock;
             }
             else
                 _enemySpawnCountDown--;
-        }
-
-        public void ResetEnemies()
-        {
-            for (int i = 0; i < _enemyCount; i++)
-                enemies[i] = null;
         }
 
         public void ConstructPlayer()
@@ -244,55 +210,20 @@ namespace Survivor
 
         public bool CheckLevelUp()
         {
-            if (_spawnedEnemies >= _gameLevel * 10)
-            {
-                for (int i = 0; i < _enemyCount; i++)
-                    if (enemies[i] != null)
-                        return false;
-            }
+            if (_enemyController.ShouldLevelUp(_gameLevel))
+                return true;
             else
                 return false;
-            return true;
-        }
-
-        public bool CheckCollision(Vector2[] playerBodyCorners, Vector2 enemyBodyStart, Vector2 enemyBodyEnd)
-        {
-            for (int i = 0; i < 4; i++)
-                if (playerBodyCorners[i].X > enemyBodyStart.X && playerBodyCorners[i].X < enemyBodyEnd.X &&
-                    playerBodyCorners[i].Y > enemyBodyStart.Y && playerBodyCorners[i].Y < enemyBodyEnd.Y)
-                    return true;
-
-            return false;
         }
 
         public void CheckDamageTaken()
         {
-            int damageTaken = 0;
             if (_invulnerabilityTimeLeft < 1)
             {
-                int XOffset = (int)_player.Size.Size.X / 2;
-                int YOffset = (int)_player.Size.Size.Y / 2;
-                Vector2 playerTopLeft = new(_player.Position.Position.X - XOffset, _player.Position.Position.Y - YOffset);
-                Vector2 playerTopRight = new(_player.Position.Position.X + XOffset, _player.Position.Position.Y - YOffset);
-                Vector2 playerBottomLeft = new(_player.Position.Position.X - XOffset, _player.Position.Position.Y + YOffset);
-                Vector2 PlayerBottomRight = new(_player.Position.Position.X + XOffset, _player.Position.Position.Y + YOffset);
-                Vector2[] playerBodyCorners = [playerTopLeft, playerTopRight, playerBottomLeft, PlayerBottomRight];
-
-                for (int i = 0; i < _enemyCount; i++)
-                    if (enemies[i] != null)
-                    {
-                        XOffset = (int)enemies[i].Size.Size.X / 2;
-                        YOffset = (int)enemies[i].Size.Size.Y / 2;
-                        Vector2 enemyBodyStart = new(enemies[i].Position.Position.X - XOffset, enemies[i].Position.Position.Y - YOffset);
-                        Vector2 enemyBodyEnd = new(enemies[i].Position.Position.X + XOffset, enemies[i].Position.Position.Y + YOffset);
-
-                        if (CheckCollision(playerBodyCorners, enemyBodyStart, enemyBodyEnd))
-                            damageTaken++;
-                    }
+                int damageTaken = _enemyController.CalculateCollisions(_player);    
                 //if damage taken, give player temporal invulnerability
                 if (damageTaken > 0)
                     _invulnerabilityTimeLeft = _invulnerabilityTimer;
-
                 _player.TakeDamage(damageTaken);
             }
         }
@@ -303,10 +234,10 @@ namespace Survivor
             _gameLevel = 1;
             gameResetTimer = 500;
             gamePaused = false;
-            _spawnedEnemies = 0;
             _player = null;
             ConstructPlayer();
-            ResetEnemies();
+            _enemyController.ResetEnemies();
+            _enemyController.ResetSpawnedEnemies();
             FillEnemies();
         }
 
@@ -329,28 +260,7 @@ namespace Survivor
                 _player.Update(_player.Position.Position);
                 _player.Position.SetPosition(_worldBoundsController.PushToWorldBounds(_player.Position.Position, _player.Size.Size));
 
-                for (int i = 0; i < _enemyCount; i++)
-                    if (enemies[i] != null)
-                    {
-                        //if enemy is off ground, apply gravity
-                        if (enemies[i].Position.Position.Y < _worldBounds.WorldEnd.Y - enemies[i].Size.Size.Y / 2)
-                            enemies[i].Velocity.ApplyForce(new(0, 0.5f));
-                        else
-                            enemies[i].Velocity.ResetAccelerationY();
-
-                        //if enemy is dead, add score and remove enemy from array
-                        if (enemies[i].State == State.Dead && enemies[i].AnimationFinished())
-                        {
-                            enemies[i] = null;
-                            _player.AddScore(_gameLevel * 10);
-                        }
-                        else
-                        {
-                            //if enemy alive, move it
-                            enemies[i].Update(_player.Position.Position);
-                            enemies[i].Position.SetPosition(_worldBoundsController.PushToWorldBounds(enemies[i].Position.Position, enemies[i].Size.Size));
-                        }
-                    }
+                _enemyController.UpdateEnemies(_worldBoundsController, _gameLevel, _player);
 
                 //check if player took damage
                 CheckDamageTaken();
@@ -358,7 +268,7 @@ namespace Survivor
                 if (CheckLevelUp())
                 {
                     _gameLevel++;
-                    _spawnedEnemies = 0;
+                    _enemyController.ResetSpawnedEnemies();
                 }
                 else
                     FillEnemies();
@@ -401,12 +311,7 @@ namespace Survivor
 
                 _player.Draw(_spriteBatch, gameTime);
 
-                foreach (Enemy enemy in enemies)
-                    if (enemy != null)
-                    {
-                        _worldBoundsController.PushToWorldBounds(enemy.Position.Position, enemy.Size.Size);
-                        enemy.Draw(_spriteBatch, gameTime);
-                    }
+                _enemyController.DrawEnemies(_worldBoundsController, _spriteBatch, gameTime);
 
                 _spriteBatch.End();
                 if (animationTime > 0)
