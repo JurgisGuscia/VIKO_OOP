@@ -1,0 +1,147 @@
+using System;
+using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Survivor.Classes.Core;
+using State = Survivor.Classes.Core.Enums.State;
+using Survivor.Classes.Controllers;
+namespace Survivor
+{
+    public partial class Game1 : Game
+    {
+        private void HandlePlayerInput(GameTime gameTime)
+        {
+            List<InputState> inputs = InputController.GetInput();
+            int dx = 0;
+            int dy = 0;
+            //Handle walking actions
+            if (inputs.Contains(InputState.Jump))
+                if (_player.State != State.Jumping)
+                {
+                    jump.Play();
+                    _player.SetState(State.Jumping);
+                    _player.Velocity.ResetVelocity();
+                    _player.Velocity.ApplyForce(new(0, -15f));
+                }
+
+            if (inputs.Contains(InputState.MoveLeft))
+            {
+                dx -= 5; // Move left
+                if (_player.State != State.Jumping)
+                    _player.SetState(State.Running);
+                _player.Direction = "left";
+            }
+
+            if (inputs.Contains(InputState.MoveRight))
+            {
+                dx += 5; // Move right
+                if (_player.State != State.Jumping)
+                    _player.SetState(State.Running);
+                _player.Direction = "right";
+            }
+
+            if (attackTimer > 0)//Prevent second attack animation, before first finishes
+            {
+                attackTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _player.SetState(State.Attacking);
+            }
+
+            else if (inputs.Contains(InputState.Attack))//handle attack input
+            {
+                if (animationTime == 0)
+                {
+                    attackTimer = 0.3f;
+                    _player.SetState(State.Attacking);
+                    animationTime = 30;
+                    swing.Play();
+
+                    if (_player.Direction == "right")
+                    {
+                        damageZoneStart = new(_player.Position.Position.X, _player.Position.Position.Y - _player.Size.Size.Y / 2 - 30);
+                        damageZoneEnd = new(_player.Position.Position.X + 100, _player.Position.Position.Y + _player.Size.Size.Y / 2 + 30);
+                    }
+                    else
+                    {
+                        damageZoneStart = new(_player.Position.Position.X - 100, _player.Position.Position.Y - _player.Size.Size.Y / 2 + 30);
+                        damageZoneEnd = new(_player.Position.Position.X, _player.Position.Position.Y + _player.Size.Size.Y / 2 + 30);
+                    }
+
+                    _enemyController.KillEnemies(damageZoneStart, damageZoneEnd);
+
+                }
+            }
+            _player.Walk(dx, dy);//move player
+            _player.Position.SetPosition(_worldBoundsController.PushToWorldBounds(_player.Position.Position, _player.Size.Size));//push back in if out of bounds
+        }
+
+        public void FillEnemies()
+        {
+            var enemyDrawData = new Animator.DrawData(
+                Content.Load<Texture2D>("zombie_idle"), 8,
+                Content.Load<Texture2D>("zombie_walk"), 8,
+                Content.Load<Texture2D>("zombie_idle"), 7,
+                Content.Load<Texture2D>("zombie_death"), 5,
+                Content.Load<Texture2D>("zombie_idle"), 8,
+                new Vector2(50, 65),
+                new Vector2(100, 100)
+            );
+            int enemyLimitThisLevel = _gameLevel * 10;
+            Vector2 enemyBoxSize = new(32, 70);
+            if (_enemySpawnCountDown < 1)
+            {
+                _enemyController.FillEnemies(enemyLimitThisLevel, enemyDrawData, enemyBoxSize);
+                _enemySpawnCountDown = _enemySpawnClock;
+            }
+            else
+                _enemySpawnCountDown--;
+        }
+
+        public void ConstructPlayer()
+        {
+            var drawData = new Animator.DrawData(
+                Content.Load<Texture2D>("IDLE"), 10,
+                Content.Load<Texture2D>("RUN"), 16,
+                Content.Load<Texture2D>("attack"), 7,
+                Content.Load<Texture2D>("IDLE"), 10,
+                Content.Load<Texture2D>("IDLE"), 10,
+                new Vector2(92, 135),
+                new Vector2(180, 200)
+            );
+            var boxSize = new Vector2(28, 67);
+            var playerPosition = new Vector2(600, (int)Math.Round(_worldBounds.WorldEnd.Y) - 600);
+            _player = new Player(_worldBounds, drawData, playerPosition, boxSize);
+        }
+
+        public bool CheckLevelUp()
+        {
+            if (_enemyController.ShouldLevelUp(_gameLevel))
+                return true;
+            else
+                return false;
+        }
+
+        public void CheckDamageTaken()
+        {
+            if (_invulnerabilityTimeLeft < 1)
+            {
+                int damageTaken = _enemyController.CalculateCollisions(_player);    
+                if (damageTaken > 0)
+                    _invulnerabilityTimeLeft = _invulnerabilityTimer;
+                _player.TakeDamage(damageTaken);
+            }
+        }
+
+        public void ResetGame()//reset game world
+        {
+            _gameLevel = 1;
+            gameResetTimer = 500;
+            gamePaused = false;
+            _player = null;
+            ConstructPlayer();
+            _enemyController.ResetEnemies();
+            _enemyController.ResetSpawnedEnemies();
+            FillEnemies();
+        }
+
+    }
+}
