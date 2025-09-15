@@ -8,11 +8,15 @@ namespace Survivor.Classes.Core
     public class Player : GameObject
     {
         private int _health;
+        private int _mana;
         private int _score;
         private int _maxHealth = 100;
+        private int _maxMana = 100;
         private readonly IWorldBounds _worldBounds;
         public int Health => _health;
         public int Score => _score;
+        public int _manaRegenerationTicks = 200;
+        public int _manaRegenerationCoolDown = 0;
 
         private readonly Animator _Animator;
 
@@ -23,6 +27,7 @@ namespace Survivor.Classes.Core
             : base((int)playerPosition.X, (int)playerPosition.Y, (int)boxSize.X, (int)boxSize.Y)
         {
             _health = _maxHealth;
+            _mana = _maxMana;
             _score = 0;
             _worldBounds = worldBounds;
             _Animator = new Animator(drawData, State.Idle);
@@ -34,7 +39,22 @@ namespace Survivor.Classes.Core
             _health += amount;
             if (_health > 100)
                 _health = 100;
+        }
+        public void RegenerateMana(int mana)
+        {
+            if (_manaRegenerationCoolDown <= 0)
+            {
+                _mana += mana;
+                if (_mana > 100)
+                    _mana = 100;
+                _manaRegenerationCoolDown = _manaRegenerationTicks;
+            }
+            else
+                _manaRegenerationCoolDown--;
+            
         } 
+        public void ReduceMana(int mana) => _mana -= mana;
+        public int Mana => _mana;
         
         public void TakeDamage(int amount) => _health -= amount;
 
@@ -49,6 +69,7 @@ namespace Survivor.Classes.Core
 
         public override void Update(Vector2 playerPosition)
         {
+            RegenerateMana(5);
             Velocity.AddVelocity();
             Position.Move(Velocity.Velocity);
             Velocity.ResetAcceleration();

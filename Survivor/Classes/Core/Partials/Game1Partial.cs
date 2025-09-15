@@ -9,9 +9,9 @@ namespace Survivor
 {
     public partial class Game1 : Game
     {
-        public void LoadDropDataAndGenerateDrops(List<Vector2> dropLocations)
+        public Animator.DrawData LoadItemData()
         {
-            var itemDrawData = new Animator.DrawData(
+            return new Animator.DrawData(
                 Content.Load<Texture2D>("GoldCoin"), 10, //idle
                 Content.Load<Texture2D>("HeartCoin"), 10, //run
                 Content.Load<Texture2D>("whiteRune"), 8, //attack
@@ -20,9 +20,27 @@ namespace Survivor
                 new Vector2(13, 13),
                 new Vector2(26, 26)
             );
-            _dropController.HandleDrops(dropLocations, itemDrawData);
-           
+
         }
+        public void LoadDropDataAndGenerateDrops(List<Vector2> dropLocations) =>
+            _dropController.HandleDrops(dropLocations, LoadItemData());
+
+
+        public Animator.DrawData LoadEffectData()
+        {
+            return new Animator.DrawData(
+                Content.Load<Texture2D>("player_jump"), 9, //idle
+                Content.Load<Texture2D>("player_fireball"), 14, //run
+                Content.Load<Texture2D>("burn_enemies"), 8, //attack
+                Content.Load<Texture2D>("burn_enemies"), 1, //dead
+                Content.Load<Texture2D>("player_fireBall"), 14,
+                new Vector2(50, 13),
+                new Vector2(100, 50)
+            );
+        }
+
+        public void LoadAndAddEffect(Vector2 position, State state) =>
+            _effectController.AddEffect(LoadEffectData(), state, position, new(0, 0), new(0, 0));
 
         private void HandlePlayerInput(GameTime gameTime)
         {
@@ -37,6 +55,7 @@ namespace Survivor
                     _player.SetState(State.Jumping);
                     _player.Velocity.ResetVelocity();
                     _player.Velocity.ApplyForce(new(0, -15f));
+                    LoadAndAddEffect(_player.Position.Position, State.Idle);
                 }
 
             if (inputs.Contains(InputState.MoveLeft))
@@ -61,6 +80,23 @@ namespace Survivor
                 _player.SetState(State.Attacking);
             }
 
+            if (inputs.Contains(InputState.Special))
+            {
+                if (_fireBallController == null && _player.Mana >= 50)
+                {
+                    int speed;
+                    if (_player.Direction == "right")
+                        speed = 6;
+                    else
+                        speed = -6;
+                    Vector2 FireBallSpawn = new(_player.Position.Position.X, _player.Position.Position.Y - 20);
+                    _fireBallController = new FireBallController(LoadEffectData(), _player.Direction, new(220, 220), FireBallSpawn, speed);
+                    _player.ReduceMana(50);
+                    fireball.Play();
+                }
+
+            }
+
             else if (inputs.Contains(InputState.Attack))//handle attack input
             {
                 if (animationTime == 0)
@@ -80,19 +116,15 @@ namespace Survivor
                         damageZoneStart = new(_player.Position.Position.X - 100, _player.Position.Position.Y - _player.Size.Size.Y / 2 + 30);
                         damageZoneEnd = new(_player.Position.Position.X, _player.Position.Position.Y + _player.Size.Size.Y / 2 + 30);
                     }
-                    
+
                     List<Vector2> DropSpawnLocations = _enemyController.KillEnemies(damageZoneStart, damageZoneEnd);
                     LoadDropDataAndGenerateDrops(DropSpawnLocations);
-                    
+
                 }
             }
             _player.Walk(dx, dy);//move player
             _player.Position.SetPosition(_worldBoundsController.PushToWorldBounds(_player.Position.Position, _player.Size.Size));//push back in if out of bounds
         }
-
-        
-
-        
 
         public void FillEnemies()
         {
@@ -144,7 +176,7 @@ namespace Survivor
         {
             if (_invulnerabilityTimeLeft < 1)
             {
-                int damageTaken = _enemyController.CalculateCollisions(_player);    
+                int damageTaken = _enemyController.CalculateCollisions(_player);
                 if (damageTaken > 0)
                     _invulnerabilityTimeLeft = _invulnerabilityTimer;
                 _player.TakeDamage(damageTaken);
@@ -163,5 +195,14 @@ namespace Survivor
             FillEnemies();
         }
 
+        public bool FireballStillActive()
+        {
+            if (_fireBallController == null)
+                return false;
+            else
+                return (int)_fireBallController.Position.Position.X > _worldBounds.WorldStart.X &&
+                        (int)_fireBallController.Position.Position.X < _worldBounds.WorldEnd.X;
+        }
+        
     }
 }

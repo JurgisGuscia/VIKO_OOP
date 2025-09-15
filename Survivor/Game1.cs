@@ -30,6 +30,8 @@ namespace Survivor
         private Player _player;
         private EnemyDropController _dropController;
         private WorldController _worldController;
+        private EffectController _effectController;
+        private FireBallController _fireBallController;
         
         public int animationTime = 0;
         public bool gamePaused = false;
@@ -45,6 +47,7 @@ namespace Survivor
         SoundEffectInstance jump;
         SoundEffectInstance land;
         SoundEffectInstance swing;
+        SoundEffectInstance fireball;
         SoundEffect ambienceEffect;
 
         public Game1()
@@ -59,6 +62,9 @@ namespace Survivor
             int maxEnemyCount = 100;
             int enemySpawnsPerCycle = 5;
             _enemyController = new EnemyController(maxEnemyCount, _worldBounds, enemySpawnsPerCycle);
+            _effectController = new EffectController();
+            
+            
             _graphics.PreferredBackBufferWidth = (int)_worldBounds.WorldEnd.X;
             _graphics.PreferredBackBufferHeight = (int)_worldBounds.WorldEnd.Y;
             _graphics.ApplyChanges();
@@ -77,7 +83,7 @@ namespace Survivor
         }
 
         protected override void LoadContent()
-        {  
+        {
             //load textures
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             backgroundTexture = Content.Load<Texture2D>("Summer3");
@@ -87,7 +93,7 @@ namespace Survivor
             //initiate background music loop
             backgroundSong = Content.Load<Song>("Mission");
             MediaPlayer.IsRepeating = true;   // loop automatically
-            MediaPlayer.Volume = 0.05f;        // 0..1
+            MediaPlayer.Volume = 0.35f;        // 0..1
             MediaPlayer.Play(backgroundSong);
 
             //load player sounds
@@ -95,14 +101,15 @@ namespace Survivor
             LoadSound(ref jump, "jump", false, 0.2f, -0.2f);
             LoadSound(ref land, "land", false, 0.2f, -0.2f);
             LoadSound(ref swing, "swing", false, 0.2f, -0.2f);
+            LoadSound(ref fireball, "fireBallSound", false, 0.2f, -0.2f);
 
             //create pixel for text drawing
             _pixel = new Texture2D(GraphicsDevice, 1, 1);
             _pixel.SetData(new[] { Color.White });
-            
             //create player and enemies
             ConstructPlayer();
             FillEnemies();
+            
         }
         
         protected override void Update(GameTime gameTime)
@@ -127,10 +134,30 @@ namespace Survivor
                 _dropController.HandlePickedUpItems(_player.Position.Position, _worldController);
                 _player.AddHealth(_dropController.GetItemHeal());
                 _player.AddScore(_dropController.GetItemScore());
+                _effectController.UpdateEffectList();
                 _worldController.UpdateWorldEffects();
+                if (_fireBallController != null)
+                {
+                    _fireBallController.Update(new(0, 0));
+                    Vector2 StartPoint = new(_fireBallController.Position.Position.X - 20, _fireBallController.Position.Position.Y - 20);
+                    Vector2 EndPoint = new(_fireBallController.Position.Position.X + 20, _fireBallController.Position.Position.Y + 20);
+                    _enemyController.KillEnemies(StartPoint, EndPoint);
+                    if (!FireballStillActive())
+                    {
+                        _fireBallController = null;
+                        fireball.Stop();
+                    }
+                        
+                }
+
                 if (_worldController.BurnEnemies)
                 {
                     List<Vector2> DropSpawnLocations = _enemyController.KillEnemies(new(0, _worldBounds.WorldEnd.Y - 40), new(_worldBounds.WorldEnd.X, _worldBounds.WorldEnd.Y));
+                    foreach (Vector2 effect in DropSpawnLocations)
+                    {
+                        LoadAndAddEffect(effect, State.Attacking);
+                    }
+
                     LoadDropDataAndGenerateDrops(DropSpawnLocations);
                 }
 
@@ -176,9 +203,13 @@ namespace Survivor
                 _ui.DrawWorld(backgroundTexture, GraphicsDevice);
                 _ui.DrawGround(landTexture);
                 _ui.DrawGameInfo(_font, _pixel, _gameLevel, _player);
+                _ui.DrawGameInstructions(_font, LoadItemData(), _spriteBatch);
                 _player.Draw(_spriteBatch, gameTime);
                 _dropController.DrawDrops(_spriteBatch, gameTime);
                 _enemyController.DrawEnemies(_worldBoundsController, _spriteBatch, gameTime);
+                _effectController.DrawEffects(_spriteBatch, gameTime);
+                if (_fireBallController != null)
+                    _fireBallController.Draw(_spriteBatch, gameTime);
                 _spriteBatch.End();
                 if (animationTime > 0)
                     animationTime--;

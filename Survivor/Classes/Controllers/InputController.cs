@@ -8,7 +8,8 @@ namespace Survivor.Classes.Controllers
         MoveRight,
         Jump,
         Attack,
-        Idle
+        Idle,
+        Special
     }
 
     public class InputController
@@ -25,6 +26,8 @@ namespace Survivor.Classes.Controllers
                 inputs.Add(InputState.MoveLeft);
             if (keyboardState.IsKeyDown(Keys.D))
                 inputs.Add(InputState.MoveRight);
+            if (keyboardState.IsKeyDown(Keys.K))
+                inputs.Add(InputState.Special);
             return inputs;
         }
     }
