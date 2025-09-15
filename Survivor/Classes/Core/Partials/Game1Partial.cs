@@ -9,6 +9,21 @@ namespace Survivor
 {
     public partial class Game1 : Game
     {
+        public void LoadDropDataAndGenerateDrops(List<Vector2> dropLocations)
+        {
+            var itemDrawData = new Animator.DrawData(
+                Content.Load<Texture2D>("GoldCoin"), 10, //idle
+                Content.Load<Texture2D>("HeartCoin"), 10, //run
+                Content.Load<Texture2D>("whiteRune"), 8, //attack
+                Content.Load<Texture2D>("redRune"), 8, //dead
+                Content.Load<Texture2D>("GoldCoin"), 10,
+                new Vector2(13, 13),
+                new Vector2(26, 26)
+            );
+            _dropController.HandleDrops(dropLocations, itemDrawData);
+           
+        }
+
         private void HandlePlayerInput(GameTime gameTime)
         {
             List<InputState> inputs = InputController.GetInput();
@@ -65,14 +80,19 @@ namespace Survivor
                         damageZoneStart = new(_player.Position.Position.X - 100, _player.Position.Position.Y - _player.Size.Size.Y / 2 + 30);
                         damageZoneEnd = new(_player.Position.Position.X, _player.Position.Position.Y + _player.Size.Size.Y / 2 + 30);
                     }
-
-                    _enemyController.KillEnemies(damageZoneStart, damageZoneEnd);
-
+                    
+                    List<Vector2> DropSpawnLocations = _enemyController.KillEnemies(damageZoneStart, damageZoneEnd);
+                    LoadDropDataAndGenerateDrops(DropSpawnLocations);
+                    
                 }
             }
             _player.Walk(dx, dy);//move player
             _player.Position.SetPosition(_worldBoundsController.PushToWorldBounds(_player.Position.Position, _player.Size.Size));//push back in if out of bounds
         }
+
+        
+
+        
 
         public void FillEnemies()
         {

@@ -24,7 +24,7 @@ namespace Survivor.Classes.Core
             : base((int)position.X, (int)position.Y, (int)boxSize.X, (int)boxSize.Y)
         {
             _worldBounds = worldBounds;
-             _Animator = new Animator(drawData, State.Idle);
+            _Animator = new Animator(drawData, State.Idle);
             _health = 100;
         }
         

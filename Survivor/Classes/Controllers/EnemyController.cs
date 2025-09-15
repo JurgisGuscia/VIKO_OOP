@@ -4,6 +4,7 @@ using Survivor.Classes.Core.Interfaces;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using Survivor.Classes.Core.Enums;
+using System.Collections.Generic;
 namespace Survivor.Classes.Controllers
 {
     public class EnemyController
@@ -81,8 +82,9 @@ namespace Survivor.Classes.Controllers
                 }
         }
 
-        public void KillEnemies(Vector2 damageZoneStart, Vector2 damageZoneEnd)
+        public List<Vector2> KillEnemies(Vector2 damageZoneStart, Vector2 damageZoneEnd)
         {
+            List<Vector2> DropPositions = new List<Vector2>();
             for (int i = 0; i < _maxEnemies; i++)
                 if (_enemies[i] != null)
                 {
@@ -98,12 +100,14 @@ namespace Survivor.Classes.Controllers
 
                     for (int j = 0; j < 4; j++)
                         if (checkPoints[j].X > damageZoneStart.X && checkPoints[j].X < damageZoneEnd.X &&
-                            checkPoints[j].Y > damageZoneStart.Y && checkPoints[j].Y < damageZoneEnd.Y)
+                            checkPoints[j].Y > damageZoneStart.Y && checkPoints[j].Y < damageZoneEnd.Y && _enemies[i].State != State.Dead)
                         {
                             _enemies[i].SetState(State.Dead);
+                            DropPositions.Add(_enemies[i].Position.Position);
                             break;
                         }
                 }
+            return DropPositions;
         }
 
         public bool Collided(Enemy enemy, Vector2[] playerBox)
@@ -137,6 +141,23 @@ namespace Survivor.Classes.Controllers
                 if (Collided(enemy, playerBox))
                     damageSuffered++;
             return damageSuffered;
+        }
+
+        public void PushEnemies(Vector2 playerPosition, float force)
+        {
+            foreach (Enemy enemy in _enemies)
+            {
+                if (enemy != null)
+                {
+                    float appliedForce;
+                    if (enemy.Position.Position.X < playerPosition.X)
+                        appliedForce = -force;
+                    else
+                        appliedForce = force;
+
+                    enemy.Velocity.ApplyForce(new(appliedForce, 0f));
+                }
+            }
         }
 
         public bool ShouldLevelUp(int gameLevel) => _enemiesSpawned >= gameLevel * 10 && AllEnemiesDead();

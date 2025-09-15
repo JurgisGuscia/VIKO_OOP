@@ -6,6 +6,7 @@ namespace Survivor.Classes.Core.Enums
         Running,
         Jumping,
         Attacking,
-        Dead
+        Dead,
     }
+
 }

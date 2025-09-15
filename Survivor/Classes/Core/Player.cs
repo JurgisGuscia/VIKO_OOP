@@ -29,7 +29,13 @@ namespace Survivor.Classes.Core
         }
 
         public void AddScore(int amount) => _score += amount;
-
+        public void AddHealth(int amount)
+        {
+            _health += amount;
+            if (_health > 100)
+                _health = 100;
+        } 
+        
         public void TakeDamage(int amount) => _health -= amount;
 
         public void SetState(State state)

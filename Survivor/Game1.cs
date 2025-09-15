@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.Xna.Framework.Media;
+﻿using Microsoft.Xna.Framework.Media;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -8,6 +7,7 @@ using Survivor.Classes.Core;
 using State = Survivor.Classes.Core.Enums.State;
 using Survivor.Classes.Core.Interfaces;
 using Survivor.Classes.Controllers;
+using System.Collections.Generic;
 namespace Survivor
 {
     public partial class  Game1 : Game
@@ -28,6 +28,8 @@ namespace Survivor
         private WorldBoundsController _worldBoundsController;
         private EnemyController _enemyController;
         private Player _player;
+        private EnemyDropController _dropController;
+        private WorldController _worldController;
         
         public int animationTime = 0;
         public bool gamePaused = false;
@@ -52,6 +54,8 @@ namespace Survivor
             IsMouseVisible = true;
             _worldBounds = new WorldBounds();
             _worldBoundsController = new WorldBoundsController(_worldBounds);
+            _dropController = new EnemyDropController();
+            _worldController = new WorldController();
             int maxEnemyCount = 100;
             int enemySpawnsPerCycle = 5;
             _enemyController = new EnemyController(maxEnemyCount, _worldBounds, enemySpawnsPerCycle);
@@ -108,14 +112,31 @@ namespace Survivor
             if (!gamePaused)//if game over don't update
             {
                 if (_player.Position.Position.Y <= _worldBounds.WorldEnd.Y - _player.Size.Size.Y / 2 - 20)//if player is off ground, apply gravity
-                    _player.Velocity.ApplyForce(new(0, 0.5f));
+                    _player.Velocity.ApplyForce(new(0f, _worldController.ApplyGravity));
                 else
                     if(_player.Velocity.Velocity.Y > 0)
                         _player.Velocity.ResetAccelerationY();
                     
                 _player.Update(_player.Position.Position);
                 _player.Position.SetPosition(_worldBoundsController.PushToWorldBounds(_player.Position.Position, _player.Size.Size));
+                if (_worldController.PushFromPlayer)
+                    _enemyController.PushEnemies(_player.Position.Position, _worldController.ApplyPushForce);
+
                 _enemyController.UpdateEnemies(_worldBoundsController, _gameLevel, _player);
+                _dropController.Update(_player.Position.Position);
+                _dropController.HandlePickedUpItems(_player.Position.Position, _worldController);
+                _player.AddHealth(_dropController.GetItemHeal());
+                _player.AddScore(_dropController.GetItemScore());
+                _worldController.UpdateWorldEffects();
+                if (_worldController.BurnEnemies)
+                {
+                    List<Vector2> DropSpawnLocations = _enemyController.KillEnemies(new(0, _worldBounds.WorldEnd.Y - 40), new(_worldBounds.WorldEnd.X, _worldBounds.WorldEnd.Y));
+                    LoadDropDataAndGenerateDrops(DropSpawnLocations);
+                }
+
+                
+
+
                 CheckDamageTaken();//check if player took damage
                 if (CheckLevelUp())//check if should level up
                 {
@@ -156,6 +177,7 @@ namespace Survivor
                 _ui.DrawGround(landTexture);
                 _ui.DrawGameInfo(_font, _pixel, _gameLevel, _player);
                 _player.Draw(_spriteBatch, gameTime);
+                _dropController.DrawDrops(_spriteBatch, gameTime);
                 _enemyController.DrawEnemies(_worldBoundsController, _spriteBatch, gameTime);
                 _spriteBatch.End();
                 if (animationTime > 0)
