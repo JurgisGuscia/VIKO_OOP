@@ -1,17 +1,8 @@
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
+using Survivor.Classes.Core.Enums;
 namespace Survivor.Classes.Controllers
 {
-    public enum InputState
-    {
-        MoveLeft,
-        MoveRight,
-        Jump,
-        Attack,
-        Idle,
-        Special
-    }
-
     public class InputController
     {
         public static List<InputState> GetInput()

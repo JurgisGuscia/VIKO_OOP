@@ -2,24 +2,17 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Survivor.Classes.Core;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using State = Survivor.Classes.Core.Enums.State;
-
 namespace Survivor.Classes.Controllers
 {
     public class EffectController
     {
         private List<SkillEffect> _skillList;
 
-        public EffectController()
-        {
-            _skillList = new List<SkillEffect>();
-        }
+        public EffectController() => _skillList = new List<SkillEffect>();
 
-        public void AddEffect(Animator.DrawData drawData, State type, Vector2 position, Vector2 size, Vector2 speed)
-        {
+        public void AddEffect(Animator.DrawData drawData, State type, Vector2 position, Vector2 size, Vector2 speed) =>
             _skillList.Add(new SkillEffect(drawData, type, position, size, speed));
-        }
 
         public void UpdateEffectList()
         {

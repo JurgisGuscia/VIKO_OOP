@@ -11,7 +11,6 @@ namespace Survivor.Classes.Controllers
         private int _currentCoinFrame = 0;
         private int _currentRuneFrame = 0;
         public UI(SpriteBatch spriteBatch) => _spriteBatch = spriteBatch;
-
         public void DrawGameInfo(SpriteFont _font, Texture2D _pixel, int gameLevel, Player player)
         {
             //debug parameters
@@ -61,7 +60,6 @@ namespace Survivor.Classes.Controllers
             _spriteBatch.DrawString(_font, " - Health ", new Vector2(50, 132), Color.White);
             _spriteBatch.DrawString(_font, " - Push enemies", new Vector2(50, 152), Color.White);
             _spriteBatch.DrawString(_font, " - Burn enemies ", new Vector2(50, 172), Color.White);
-            
 
             Texture2D GoldCoinSprite = drawData.spriteSheetIdle;
             int GoldCoinFrames = drawData.idleFrames;
@@ -75,7 +73,6 @@ namespace Survivor.Classes.Controllers
 
             int CoinFrameWidth = GoldCoinSprite.Width / GoldCoinFrames;
             int CoinFrameHeight = GoldCoinSprite.Height;
-
             sourceRect = new Rectangle(_currentCoinFrame * CoinFrameWidth, 0, CoinFrameWidth, CoinFrameHeight);
             spriteBatch.Draw(
                 GoldCoinSprite,
@@ -102,7 +99,6 @@ namespace Survivor.Classes.Controllers
 
             int RuneFrameWidth = WhiteRuneSprite.Width / WhiteRuneFrames;
             int RuneFrameHeight = WhiteRuneSprite.Height;
-
             sourceRect = new Rectangle(_currentRuneFrame * RuneFrameWidth, 0, RuneFrameWidth, RuneFrameHeight);
             spriteBatch.Draw(
                 WhiteRuneSprite,

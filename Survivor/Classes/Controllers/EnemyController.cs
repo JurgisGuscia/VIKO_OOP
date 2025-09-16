@@ -159,7 +159,6 @@ namespace Survivor.Classes.Controllers
                 }
             }
         }
-
         public bool ShouldLevelUp(int gameLevel) => _enemiesSpawned >= gameLevel * 10 && AllEnemiesDead();
    
     }

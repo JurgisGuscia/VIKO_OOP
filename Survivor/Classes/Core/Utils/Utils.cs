@@ -1,6 +1,5 @@
 using System;
 using Survivor.Classes.Core.Interfaces;
-
 namespace Survivor.Classes.Core.Utils
 {
     public static class Util
@@ -20,8 +19,6 @@ namespace Survivor.Classes.Core.Utils
             y = random.Next(40, ToInt(bounds.WorldEnd.Y) - 200);
             return new(x, y);
         }
-        
-        
     }
 
 }

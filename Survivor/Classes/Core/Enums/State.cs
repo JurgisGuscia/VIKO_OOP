@@ -9,4 +9,14 @@ namespace Survivor.Classes.Core.Enums
         Dead,
     }
 
+    public enum InputState
+    {
+        MoveLeft,
+        MoveRight,
+        Jump,
+        Attack,
+        Idle,
+        Special
+    }
+
 }

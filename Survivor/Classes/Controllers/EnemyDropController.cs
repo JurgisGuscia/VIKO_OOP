@@ -41,7 +41,6 @@ namespace Survivor.Classes.Controllers
         {
             foreach (Vector2 location in dropLocations)
             {
-                
                 foreach (var group in _dropTable)
                 {
                     int dropChecker = random.Next(1, 101);
@@ -64,7 +63,7 @@ namespace Survivor.Classes.Controllers
 
         }
 
-        public void HandleDrops(List<Vector2> dropLocations, Animator.DrawData drawData)
+        public void HandleDrops(List<Vector2> dropLocations, Animator.DrawData drawData) 
         {
             if (ShouldDrop())
                 GenerateDrops(dropLocations, drawData);

@@ -1,5 +1,4 @@
 using System.Numerics;
-
 namespace Survivor.Classes.Core.Components
 {
     public class ObjectVelocity(float x, float y)

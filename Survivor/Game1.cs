@@ -161,9 +161,6 @@ namespace Survivor
                     LoadDropDataAndGenerateDrops(DropSpawnLocations);
                 }
 
-                
-
-
                 CheckDamageTaken();//check if player took damage
                 if (CheckLevelUp())//check if should level up
                 {

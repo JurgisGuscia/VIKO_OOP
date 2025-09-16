@@ -2,7 +2,6 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using State = Survivor.Classes.Core.Enums.State;
 using Survivor.Classes.Core.Interfaces;
-
 namespace Survivor.Classes.Core
 {
     public class Player : GameObject

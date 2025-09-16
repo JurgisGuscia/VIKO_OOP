@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Survivor.Classes.Core;
 using State = Survivor.Classes.Core.Enums.State;
 using Survivor.Classes.Controllers;
+using Survivor.Classes.Core.Enums;
 namespace Survivor
 {
     public partial class Game1 : Game
@@ -94,7 +95,6 @@ namespace Survivor
                     _player.ReduceMana(50);
                     fireball.Play();
                 }
-
             }
 
             else if (inputs.Contains(InputState.Attack))//handle attack input
@@ -119,7 +119,6 @@ namespace Survivor
 
                     List<Vector2> DropSpawnLocations = _enemyController.KillEnemies(damageZoneStart, damageZoneEnd);
                     LoadDropDataAndGenerateDrops(DropSpawnLocations);
-
                 }
             }
             _player.Walk(dx, dy);//move player
